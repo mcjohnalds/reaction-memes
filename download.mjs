@@ -4,6 +4,8 @@ import fs from "node:fs";
 import token from "./token.json" with { type: "json" };
 import { getUserAgent } from "./shared.mjs";
 
+const maxImages = 10;
+
 async function getNewPosts(after) {
   const subreddit = "ReactionMemes";
   const params = new URLSearchParams({
@@ -24,26 +26,39 @@ async function getNewPosts(after) {
   return await res.json();
 }
 
-await fs.promises.mkdir("images", { recursive: true });
-let posts;
-do {
-  posts = await getNewPosts();
-  let i = 0;
-  for (const post of posts.data.children) {
-    const medias = Object.entries(post.data.media_metadata);
-    for (const [id, media] of medias) {
-      const [, extension] = media.m.split("/");
-      const destination = `images/${id}.${extension}`;
-      // CLIP was trainined on 214x214 px images which tends to be the 2nd image
-      const p = media.p[1] ?? media.p[0];
-      const res = await fetch(p.u);
-      const stream = Readable.fromWeb(res.body);
-      await fs.promises.writeFile(destination, stream);
-      await setTimeout(1000);
-      i++;
-      if (i === 3) {
-        process.exit(0);
+async function* getMedias() {
+  await fs.promises.mkdir("images", { recursive: true });
+  let posts;
+  do {
+    posts = await getNewPosts();
+    for (const post of posts.data.children) {
+      const medias = Object.values(post.data.media_metadata);
+      for (const media of medias) {
+        yield media;
       }
     }
+  } while (posts.data.after);
+}
+
+async function main() {
+  let n = 0;
+  for await (const media of getMedias()) {
+    const [, extension] = media.m.split("/");
+    const destination = `images/${media.id}.${extension}`;
+    // CLIP was trainined on 214x214 px images which tends to be the 2nd image
+    const p = media.p[1] ?? media.p[0];
+    const res = await fetch(p.u);
+    const stream = Readable.fromWeb(res.body);
+    const tmp = `/tmp/auto-reaction-meme-image`;
+    await fs.promises.writeFile(tmp, stream);
+    await fs.promises.rename(tmp, destination);
+    await setTimeout(1000);
+    n++;
+    process.stdout.write(`${n}/${maxImages}\n`);
+    if (n === maxImages) {
+      return;
+    }
   }
-} while (posts.after);
+}
+
+main();
