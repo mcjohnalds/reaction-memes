@@ -5,6 +5,7 @@
   "scripts": {
     "auth": "node --env-file=.env auth.mjs",
     "download": "node --env-file=.env download.mjs",
+    "encode": "node --env-file=.env encode.mjs",
     "search": "node --env-file=.env search.mjs",
     "clean": "rm -rf data/images"
   },
