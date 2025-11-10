@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import {
   CLIPTextModelWithProjection,
   AutoTokenizer,
@@ -23,6 +24,17 @@ const processor = await AutoProcessor.from_pretrained(
   { dtype: "fp32" },
 );
 
+export async function encodeImages() {
+  const encodings = [];
+  const files = await fs.promises.readdir("data/images");
+  for (const file of files) {
+    const vector = await encodeImage(`data/images/${file}`);
+    encodings.push({ file, vector });
+  }
+  const json = JSON.stringify(encodings, null, 2);
+  await fs.promises.writeFile("data/encodings.json", json);
+}
+
 export async function encodeText(text) {
   const inputs = await tokenizer(text);
   const output = await textModel(inputs);
@@ -30,7 +42,7 @@ export async function encodeText(text) {
   return normalizeVector(v);
 }
 
-export async function encodeImage(imagePath) {
+async function encodeImage(imagePath) {
   const image = await RawImage.read(imagePath);
   const inputs = await processor(image);
   const output = await visionModel(inputs);
