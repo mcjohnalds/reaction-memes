@@ -1,25 +1,5 @@
-import {
-  CLIPTextModelWithProjection,
-  AutoTokenizer,
-} from "@huggingface/transformers";
 import fs from "node:fs";
-import { imagesDir, normalizeVector } from "./shared.mjs";
-
-const textModel = await CLIPTextModelWithProjection.from_pretrained(
-  "Xenova/clip-vit-base-patch32",
-  { dtype: "fp32" },
-);
-const tokenizer = await AutoTokenizer.from_pretrained(
-  "Xenova/clip-vit-base-patch32",
-  { dtype: "fp32" },
-);
-
-async function encodeText(text) {
-  const inputs = await tokenizer(text);
-  const output = await textModel(inputs);
-  const v = Array.from(output.text_embeds.data);
-  return normalizeVector(v);
-}
+import { encodeText } from "./clip.mjs";
 
 function dotProduct(a, b) {
   let sum = 0;
