@@ -6,7 +6,7 @@
     "auth": "node --env-file=.env auth.mjs",
     "download": "node --env-file=.env download.mjs",
     "search": "node --env-file=.env search.mjs",
-    "clean": "rm -rf images"
+    "clean": "rm -rf data/images"
   },
   "keywords": [],
   "author": "",

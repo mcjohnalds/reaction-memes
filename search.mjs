@@ -6,6 +6,7 @@ import {
   RawImage,
 } from "@huggingface/transformers";
 import fs from "node:fs";
+import { imagesDir } from "./shared.mjs";
 
 const textModel = await CLIPTextModelWithProjection.from_pretrained(
   "Xenova/clip-vit-base-patch32",
@@ -56,9 +57,9 @@ function dotProduct(a, b) {
 
 const textVec = await encodeText(process.argv[2]);
 const results = [];
-const files = await fs.promises.readdir("images");
+const files = await fs.promises.readdir(imagesDir);
 for (const file of files) {
-  const imgVec = await encodeImage(`images/${file}`);
+  const imgVec = await encodeImage(`${imagesDir}/${file}`);
   const similarity = dotProduct(textVec, imgVec);
   results.push({ file, similarity });
 }

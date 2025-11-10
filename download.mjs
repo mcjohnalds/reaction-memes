@@ -1,8 +1,8 @@
 import { setTimeout } from "node:timers/promises";
 import { Readable } from "node:stream";
 import fs from "node:fs";
-import token from "./token.json" with { type: "json" };
-import { getUserAgent } from "./shared.mjs";
+import token from "./data/token.json" with { type: "json" };
+import { getUserAgent, imagesDir } from "./shared.mjs";
 
 const maxImages = 10;
 
@@ -27,7 +27,7 @@ async function getNewPosts(after) {
 }
 
 async function* getMedias() {
-  await fs.promises.mkdir("images", { recursive: true });
+  await fs.promises.mkdir(imagesDir, { recursive: true });
   let posts;
   do {
     posts = await getNewPosts();
@@ -44,7 +44,7 @@ async function main() {
   let n = 0;
   for await (const media of getMedias()) {
     const [, extension] = media.m.split("/");
-    const destination = `images/${media.id}.${extension}`;
+    const destination = `${imagesDir}/${media.id}.${extension}`;
     // CLIP was trainined on 214x214 px images which tends to be the 2nd image
     const p = media.p[1] ?? media.p[0];
     const res = await fetch(p.u);
