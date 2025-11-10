@@ -9,19 +9,19 @@ import fs from "node:fs";
 
 const textModel = await CLIPTextModelWithProjection.from_pretrained(
   "Xenova/clip-vit-base-patch32",
-  { dtype: "fp32" }
+  { dtype: "fp32" },
 );
 const visionModel = await CLIPVisionModelWithProjection.from_pretrained(
   "Xenova/clip-vit-base-patch32",
-  { dtype: "fp32" }
+  { dtype: "fp32" },
 );
 const tokenizer = await AutoTokenizer.from_pretrained(
   "Xenova/clip-vit-base-patch32",
-  { dtype: "fp32" }
+  { dtype: "fp32" },
 );
 const processor = await AutoProcessor.from_pretrained(
   "Xenova/clip-vit-base-patch32",
-  { dtype: "fp32" }
+  { dtype: "fp32" },
 );
 
 function normalize(vec) {
@@ -54,7 +54,7 @@ function dotProduct(a, b) {
   return sum;
 }
 
-const textVec = await encodeText("what is going on");
+const textVec = await encodeText(process.argv[2]);
 const results = [];
 const files = await fs.promises.readdir("images");
 for (const file of files) {
@@ -67,5 +67,5 @@ console.table(
   results.map((r) => ({
     file: r.file,
     similarity: r.similarity.toFixed(2),
-  }))
+  })),
 );

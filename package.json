@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "description": "",
   "scripts": {
-    "start": "node index.mjs"
+    "auth": "node --env-file=.env auth.mjs",
+    "download": "node --env-file=.env download.mjs",
+    "search": "node --env-file=.env search.mjs",
+    "clean": "rm -rf images"
   },
   "keywords": [],
   "author": "",
@@ -11,5 +14,9 @@
   "type": "module",
   "dependencies": {
     "@huggingface/transformers": "^3.7.6"
-  }
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  },
+  "prettier": {}
 }
