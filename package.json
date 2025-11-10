@@ -4,7 +4,7 @@
   "description": "",
   "scripts": {
     "start": "node --env-file=.env src/index.mjs",
-    "test": "node --test"
+    "start-watch": "node --env-file=.env --watch src/index.mjs"
   },
   "keywords": [],
   "author": "",

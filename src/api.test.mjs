@@ -20,6 +20,14 @@ test("get index page", async () => {
   assert(text.includes("<html>"));
 });
 
+test("get search document", async () => {
+  const res = await fetch("http://localhost:8081/search?query=foo%20bar");
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get("Content-Type"), "text/html");
+  const text = await res.text();
+  assert(text.includes("foo bar"));
+});
+
 test("get javascript file", async () => {
   const res = await fetch("http://localhost:8081/script.mjs");
   assert.equal(res.status, 200);
