@@ -1,0 +1,15 @@
+{
+  "name": "auto-creation-meme",
+  "version": "0.1.0",
+  "description": "",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "UNLICENSED",
+  "type": "module",
+  "dependencies": {
+    "@huggingface/transformers": "^3.7.6"
+  }
+}
