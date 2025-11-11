@@ -101,7 +101,7 @@ function getIndexPageResponse() {
   return {
     status: 200,
     headers: { "Content-Type": "text/html" },
-    body: Readable.from([renderIndex(files)]),
+    body: Readable.from([renderIndex()]),
   };
 }
 
@@ -109,7 +109,7 @@ async function getSearchPageResponse(url) {
   const query = url.searchParams.get("query");
   const textVec = await encodeText(query);
   const results = [];
-  for (const encoding of encodings) {
+  for (const encoding of encodings.slice(0, 25)) {
     const similarity = dotProduct(textVec, encoding.vector);
     results.push({ file: encoding.file, similarity });
   }
@@ -122,7 +122,7 @@ async function getSearchPageResponse(url) {
   };
 }
 
-function renderIndex(files) {
+function renderIndex() {
   return `
     <!DOCTYPE html>
     <html>
@@ -133,14 +133,13 @@ function renderIndex(files) {
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Rubik+Doodle+Shadow&display=swap" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Yusei+Magic&display=swap" rel="stylesheet">
+        <template id="results"></template>
       </head>
       <body>
         <h1>Auto Reaction Meme</h1>
         <h2>Type literally anything to find the perfect meme</h2>
         <input autofocus />
-        <div class="results">
-          ${renderSearch(files)}
-        </div>
+        <div class="columns"></div>
         <script src="/script.mjs" type="module"></script>
       </body>
     </html>
@@ -148,5 +147,5 @@ function renderIndex(files) {
 }
 
 function renderSearch(files) {
-  return files.map((file) => `<img src="images/${file}" />`).join("");
+  return files.map((file, i) => `<img src="images/${file}" />`).join("");
 }

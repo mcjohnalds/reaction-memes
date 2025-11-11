@@ -87,16 +87,19 @@ button:active {
   background-color: var(--foreground);
 }
 
-.results {
+.columns {
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
   gap: 16px;
 
-  & > img {
-    background-color: white;
-    width: 200px;
-    height: 200px;
-    object-fit: contain;
+  & > div {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    & > img {
+      width: 100%;
+    }
   }
 }
