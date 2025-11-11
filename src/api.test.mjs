@@ -25,7 +25,9 @@ test("get search document", async () => {
   assert.equal(res.status, 200);
   assert.equal(res.headers.get("Content-Type"), "text/html");
   const text = await res.text();
-  assert(text.includes("foo bar"));
+  assert(text.startsWith(`<img src="`));
+  const fileName = text.split('"')[1];
+  await fs.promises.access(`data/${fileName}`);
 });
 
 test("get javascript file", async () => {

@@ -2,6 +2,7 @@ import * as http from "node:http";
 import { Readable } from "node:stream";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { encodeText } from "./clip.mjs";
 
 const contentTypes = new Map([
   [".ico", "image/x-icon"],
@@ -11,6 +12,10 @@ const contentTypes = new Map([
   [".mjs", "text/javascript"],
   [".webmanifest", "application/manifest+json"],
 ]);
+const encodingsFile = await fs.promises.readFile("data/encodings.json", {
+  encoding: "utf8",
+});
+const encodings = JSON.parse(encodingsFile);
 
 class NotFoundError extends Error {}
 
@@ -28,6 +33,14 @@ async function handleRequest(req, res) {
   }
 }
 
+function dotProduct(a, b) {
+  let sum = 0;
+  for (let i = 0; i < a.length; i++) {
+    sum += a[i] * b[i];
+  }
+  return sum;
+}
+
 async function getResponse(req) {
   try {
     if (req.method !== "GET") {
@@ -37,7 +50,7 @@ async function getResponse(req) {
     if (url.pathname === "/") {
       return getIndexPageResponse();
     } else if (url.pathname === "/search") {
-      return getSearchPageResponse(url);
+      return await getSearchPageResponse(url);
     }
     return await getStaticFileResponse(url);
   } catch (error) {
@@ -51,17 +64,25 @@ async function getResponse(req) {
 }
 
 async function getStaticFileResponse(url) {
-  const file = path.join("static", url.pathname);
+  if (url.pathname.includes("..")) {
+    // This is probably redundant but worth it just in case there is a bug in
+    // the logic
+    throw new NotFoundError();
+  }
+  let file;
+  if (url.pathname.startsWith("/images/")) {
+    file = path.join("data", url.pathname);
+  } else {
+    file = path.join("static", url.pathname);
+  }
+  try {
+    await fs.promises.access(file);
+  } catch (error) {
+    throw new NotFoundError();
+  }
   const ext = path.extname(file);
   const contentType = contentTypes.get(ext);
   if (!contentType) {
-    throw new NotFoundError();
-  }
-  const allowed = await fs.promises
-    .access(file)
-    .then(() => true)
-    .catch(() => false);
-  if (!allowed) {
     throw new NotFoundError();
   }
   const stream = fs.createReadStream(file);
@@ -73,39 +94,59 @@ async function getStaticFileResponse(url) {
 }
 
 function getIndexPageResponse() {
+  const files = encodings.map((encoding) => encoding.file);
   return {
     status: 200,
     headers: { "Content-Type": "text/html" },
-    body: Readable.from([renderIndex()]),
+    body: Readable.from([renderIndex(files)]),
   };
 }
 
-function getSearchPageResponse(url) {
+async function getSearchPageResponse(url) {
+  const query = url.searchParams.get("query");
+  const textVec = await encodeText(query);
+  const results = [];
+  for (const encoding of encodings) {
+    const similarity = dotProduct(textVec, encoding.vector);
+    results.push({ file: encoding.file, similarity });
+  }
+  results.sort((a, b) => b.similarity - a.similarity);
+  const files = results.map((result) => result.file);
   return {
     status: 200,
     headers: { "Content-Type": "text/html" },
-    body: Readable.from([url.searchParams.get("query")]),
+    body: Readable.from([renderSearch(files)]),
   };
 }
 
-function renderIndex() {
+function renderIndex(files) {
   return `
     <!DOCTYPE html>
     <html>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="/style.css" type="text/css" />
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Rubik+Doodle+Shadow&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Yusei+Magic&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Molengo&display=swap" rel="stylesheet">
       </head>
       <body>
-        <h1>Hello</h1>
+        <h1>Auto Reaction Meme</h1>
         <form>
-          <input />
-          <button type="submit">Search</button>
+          <input autofocus />
+          <button type="submit" tabindex="0">Search</button>
         </form>
         <div class="results">
+          ${renderSearch(files)}
         </div>
         <script src="/script.mjs" type="module"></script>
       </body>
     </html>
   `;
+}
+
+function renderSearch(files) {
+  return files.map((file) => `<img src="images/${file}" />`).join("");
 }
