@@ -2,6 +2,7 @@ const inputWrapper = document.body.querySelector(".inputWrapper");
 const input = document.body.querySelector("input");
 const columns = document.body.querySelector(".columns");
 let searchCounter = 0;
+let replaceColumnsCounter = 0;
 let searchTimeoutId = null;
 
 inputWrapper.addEventListener("click", () => {
@@ -24,6 +25,12 @@ async function search() {
   if (searchCounter !== counter) {
     return;
   }
+  replaceColumns(images);
+}
+
+async function replaceColumns(images) {
+  replaceColumnsCounter++;
+  const counter = replaceColumnsCounter;
   const columnCount = Math.floor(columns.clientWidth / 200);
   columns.innerHTML = "<div></div>".repeat(columnCount);
   for (let i = 0; i < images.length; i++) {
@@ -33,10 +40,10 @@ async function search() {
     columns.children[columnIndex].appendChild(img);
     // Let thread breathe
     await new Promise((r) => setTimeout(r, 0));
-    if (searchCounter !== counter) {
+    if (replaceColumnsCounter !== counter) {
       return;
     }
   }
 }
 
-search();
+replaceColumns(window.initialImages);

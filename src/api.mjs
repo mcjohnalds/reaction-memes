@@ -19,6 +19,7 @@ const encodingsFile = await fs.promises.readFile("data/encodings.json", {
   encoding: "utf8",
 });
 const encodings = JSON.parse(encodingsFile);
+const pageSize = 50;
 
 class NotFoundError extends Error {}
 
@@ -97,11 +98,11 @@ async function getStaticFileResponse(url) {
 }
 
 function getIndexPageResponse() {
-  const files = encodings.map((encoding) => encoding.file);
+  const files = encodings.map((encoding) => encoding.file).slice(0, pageSize);
   return {
     status: 200,
     headers: { "Content-Type": "text/html" },
-    body: Readable.from([renderIndex()]),
+    body: Readable.from([renderIndex(files)]),
   };
 }
 
@@ -109,7 +110,7 @@ async function getSearchPageResponse(url) {
   const query = url.searchParams.get("query");
   const textVec = await encodeText(query);
   const results = [];
-  for (const encoding of encodings.slice(0, 50)) {
+  for (const encoding of encodings.slice(0, pageSize)) {
     const similarity = dotProduct(textVec, encoding.vector);
     results.push({ file: encoding.file, similarity });
   }
@@ -123,7 +124,7 @@ async function getSearchPageResponse(url) {
   };
 }
 
-function renderIndex() {
+function renderIndex(files) {
   return `
     <!DOCTYPE html>
     <html>
@@ -144,6 +145,7 @@ function renderIndex() {
           <input autofocus />
         </div>
         <div class="columns"></div>
+        <script>window.initialImages = ${JSON.stringify(files)};</script>
         <script src="/script.mjs" type="module"></script>
       </body>
     </html>
