@@ -1,9 +1,18 @@
 const inputWrapper = document.body.querySelector(".inputWrapper");
 const input = document.body.querySelector("input");
 const columns = document.body.querySelector(".columns");
+let images = window.initialImages;
 let searchCounter = 0;
 let replaceColumnsCounter = 0;
 let searchTimeoutId = null;
+let resizeTimeoutId = null;
+
+window.addEventListener("resize", () => {
+  if (resizeTimeoutId !== null) {
+    clearTimeout(resizeTimeoutId);
+  }
+  resizeTimeoutId = setTimeout(replaceColumns, 200);
+});
 
 inputWrapper.addEventListener("click", () => {
   input.focus();
@@ -13,7 +22,7 @@ input.addEventListener("input", () => {
   if (searchTimeoutId !== null) {
     clearTimeout(searchTimeoutId);
   }
-  searchTimeoutId = setTimeout(search, 200);
+  searchTimeoutId = setTimeout(search, 400);
 });
 
 async function search() {
@@ -21,14 +30,15 @@ async function search() {
   const counter = searchCounter;
   const params = new URLSearchParams({ query: input.value });
   const res = await fetch(`/search?${params}`);
-  const images = await res.json();
+  const json = await res.json();
   if (searchCounter !== counter) {
     return;
   }
-  replaceColumns(images);
+  images = json;
+  replaceColumns();
 }
 
-async function replaceColumns(images) {
+async function replaceColumns() {
   replaceColumnsCounter++;
   const counter = replaceColumnsCounter;
   const columnCount = Math.floor(columns.clientWidth / 200);
@@ -46,4 +56,4 @@ async function replaceColumns(images) {
   }
 }
 
-replaceColumns(window.initialImages);
+replaceColumns();
