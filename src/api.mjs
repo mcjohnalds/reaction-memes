@@ -115,10 +115,11 @@ async function getSearchPageResponse(url) {
   }
   results.sort((a, b) => b.similarity - a.similarity);
   const files = results.map((result) => result.file);
+  const json = JSON.stringify(files);
   return {
     status: 200,
-    headers: { "Content-Type": "text/html" },
-    body: Readable.from([renderSearch(files)]),
+    headers: { "Content-Type": "application/json" },
+    body: Readable.from([json]),
   };
 }
 
@@ -133,7 +134,6 @@ function renderIndex() {
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Rubik+Doodle+Shadow&display=swap" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Yusei+Magic&display=swap" rel="stylesheet">
-        <template id="results"></template>
       </head>
       <body>
         <h1>Auto Reaction Meme</h1>
@@ -148,8 +148,4 @@ function renderIndex() {
       </body>
     </html>
   `;
-}
-
-function renderSearch(files) {
-  return files.map((file, i) => `<img src="images/${file}" />`).join("");
 }
