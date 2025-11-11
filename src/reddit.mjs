@@ -10,7 +10,7 @@ import {
   getUserAgent,
 } from "./shared.mjs";
 
-const maxImages = 10;
+const maxImages = 100;
 
 export async function authenticate() {
   const res = await fetch("https://www.reddit.com/api/v1/access_token", {
