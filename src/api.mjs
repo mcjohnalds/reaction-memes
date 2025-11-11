@@ -130,10 +130,10 @@ function renderIndex(files) {
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Rubik+Doodle+Shadow&display=swap" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Yusei+Magic&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Molengo&display=swap" rel="stylesheet">
       </head>
       <body>
         <h1>Auto Reaction Meme</h1>
+        <h2>Find the perfect meme</h2>
         <form>
           <input autofocus />
           <button type="submit" tabindex="0">Search</button>

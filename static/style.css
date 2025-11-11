@@ -5,6 +5,7 @@
   --background: #222;
   --foreground: #eee;
   font-family: "Molengo", sans-serif;
+  letter-spacing: 0.1px;
 }
 
 *::selection {
@@ -36,10 +37,16 @@ h1 {
   transform: scaleX(1.3);
   transform-origin: 0 0;
   align-self: flex-start;
+  letter-spacing: 0.5px;
 }
 
 h2 {
-  font-family: "Yusei Magic", sans-serif;
+  margin: -8px 0;
+  font-weight: normal;
+  font-size: 24px;
+  font-variant: small-caps;
+  align-self: flex-start;
+  letter-spacing: 0.2px;
 }
 
 form {
