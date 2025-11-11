@@ -137,10 +137,7 @@ function renderIndex(files) {
       <body>
         <h1>Auto Reaction Meme</h1>
         <h2>Type literally anything to find the perfect meme</h2>
-        <form>
-          <input autofocus />
-          <button type="submit" tabindex="0">Search</button>
-        </form>
+        <input autofocus />
         <div class="results">
           ${renderSearch(files)}
         </div>

@@ -49,12 +49,6 @@ h2 {
   letter-spacing: 0.2px;
 }
 
-form {
-  display: flex;
-  flex-direction: row;
-  gap: 16px;
-}
-
 input {
   border-radius: 0;
   outline: none;
@@ -97,9 +91,12 @@ button:active {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
+  gap: 16px;
 
   & > img {
+    background-color: white;
     width: 200px;
+    height: 200px;
     object-fit: contain;
   }
 }
