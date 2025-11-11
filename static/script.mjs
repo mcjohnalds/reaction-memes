@@ -1,8 +1,13 @@
+const inputWrapper = document.body.querySelector(".inputWrapper");
 const input = document.body.querySelector("input");
 const columns = document.body.querySelector(".columns");
 const results = document.getElementById("results");
 let searchCounter = 0;
 let searchTimeoutId = null;
+
+inputWrapper.addEventListener("click", () => {
+  input.focus();
+});
 
 input.addEventListener("input", () => {
   if (searchTimeoutId !== null) {
