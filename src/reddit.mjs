@@ -37,13 +37,11 @@ export async function scrape() {
   });
   const token = JSON.parse(tokenFile);
   let n = 0;
-  const medias = getMedias(token.access_token);
-  for await (const media of medias) {
-    const [, extension] = media.m.split("/");
-    const destination = `data/images/${media.id}.${extension}`;
-    // CLIP was trainined on 214x214 px images which tends to be the 2nd image
-    const p = media.p[1] ?? media.p[0];
-    const res = await fetch(p.u);
+  const images = getImages(token.access_token);
+  for await (const image of images) {
+    const fileName = new URL(image).pathname.substring(1);
+    const destination = `data/images/${fileName}`;
+    const res = await fetch(image);
     assert.equal(res.status, 200);
     const stream = Readable.fromWeb(res.body);
     const tmp = `/tmp/auto-reaction-meme-image`;
@@ -61,7 +59,7 @@ export async function scrape() {
 async function getNewPosts(accessToken, after) {
   const subreddit = "ReactionMemes";
   const params = new URLSearchParams({
-    limit: 2,
+    limit: 100,
     raw_json: 1,
   });
   if (after) {
@@ -78,16 +76,20 @@ async function getNewPosts(accessToken, after) {
   return await res.json();
 }
 
-async function* getMedias(accessToken) {
+async function* getImages(accessToken) {
   await fs.promises.mkdir("data/images", { recursive: true });
   let after;
   do {
     const posts = await getNewPosts(accessToken, after);
     after = posts.data.after;
     for (const post of posts.data.children) {
-      const medias = Object.values(post.data.media_metadata);
-      for (const media of medias) {
-        yield media;
+      if (post.data.media_preview) {
+        for (const media of Object.values(post.data.media_preview)) {
+          yield media.p.at(-1);
+        }
+      }
+      if (post.data.preview) {
+        yield post.data.preview.images[0].source.url;
       }
     }
   } while (after);

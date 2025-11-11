@@ -8,6 +8,9 @@ const contentTypes = new Map([
   [".ico", "image/x-icon"],
   [".png", "image/png"],
   [".jpg", "image/jpeg"],
+  [".jpeg", "image/jpeg"],
+  [".gif", "image/gif"],
+  [".webp", "image/webp"],
   [".css", "text/css"],
   [".mjs", "text/javascript"],
   [".webmanifest", "application/manifest+json"],
@@ -133,7 +136,7 @@ function renderIndex(files) {
       </head>
       <body>
         <h1>Auto Reaction Meme</h1>
-        <h2>Find the perfect meme</h2>
+        <h2>Type literally anything to find the perfect meme</h2>
         <form>
           <input autofocus />
           <button type="submit" tabindex="0">Search</button>

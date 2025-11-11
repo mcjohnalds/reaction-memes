@@ -15,6 +15,7 @@ if (command === "auth") {
 } else if (command === "clean") {
   const fs = await import("node:fs");
   await fs.promises.rm("data/images", { recursive: true, force: true });
+  await fs.promises.rm("data/encodings.json", { recursive: true, force: true });
 } else {
   throw new Error("Error: unknown command");
 }
