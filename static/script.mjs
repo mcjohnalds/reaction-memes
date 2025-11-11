@@ -21,7 +21,7 @@ async function search() {
   const params = new URLSearchParams({ query: input.value });
   const res = await fetch(`/search?${params}`);
   const images = await res.json();
-  if (searchCounter != counter) {
+  if (searchCounter !== counter) {
     return;
   }
   const columnCount = Math.floor(columns.clientWidth / 200);
@@ -31,6 +31,11 @@ async function search() {
     img.src = `images/${images[i]}`;
     const columnIndex = i % columnCount;
     columns.children[columnIndex].appendChild(img);
+    // Let thread breathe
+    await new Promise((r) => setTimeout(r, 0));
+    if (searchCounter !== counter) {
+      return;
+    }
   }
 }
 
