@@ -68,6 +68,7 @@ async function getResponse(req) {
 }
 
 async function getStaticFileResponse(url) {
+  let cacheControl;
   if (url.pathname.includes("..")) {
     // This is probably redundant but worth it just in case there is a bug in
     // the logic
@@ -75,6 +76,7 @@ async function getStaticFileResponse(url) {
   }
   let file;
   if (url.pathname.startsWith("/images/")) {
+    cacheControl = "public, max-age=31536000, immutable";
     file = path.join("data", url.pathname);
   } else {
     file = path.join("static", url.pathname);
@@ -92,7 +94,10 @@ async function getStaticFileResponse(url) {
   const stream = fs.createReadStream(file);
   return {
     status: 200,
-    headers: { "Content-Type": contentType },
+    headers: {
+      "Content-Type": contentType,
+      ...(cacheControl ? { "Cache-Control": cacheControl } : undefined),
+    },
     body: stream,
   };
 }
@@ -134,7 +139,6 @@ function renderIndex(files) {
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Rubik+Doodle+Shadow&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Yusei+Magic&display=swap" rel="stylesheet">
       </head>
       <body>
         <x-app>
