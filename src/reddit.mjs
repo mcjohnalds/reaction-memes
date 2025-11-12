@@ -10,7 +10,6 @@ import {
   getUserAgent,
 } from "./shared.mjs";
 
-const maxImages = 10_000;
 const scrapeLogFile = "data/scrape-requests.jsonl";
 
 export async function authenticate() {
@@ -48,22 +47,18 @@ export async function scrape() {
       .access(destination)
       .then(() => true)
       .catch(() => false);
-    const progress = `${n} / ${maxImages}`;
     if (exists) {
-      process.stdout.write(`${progress} - ${fileName} exists, skipping\n`);
+      process.stdout.write(`${n} exists ${fileName}\n`);
     } else {
-      await saveImage(image);
-      process.stdout.write(`${progress} - ${fileName} saved\n`);
-      await setTimeout(1000);
-    }
-    if (n === maxImages) {
-      return;
+      await saveImage(destination, image);
+      process.stdout.write(`${n} saved ${fileName}\n`);
+      await setTimeout(1_000);
     }
   }
   process.stdout.write("scrape complete\n");
 }
 
-async function saveImage(url) {
+async function saveImage(destination, url) {
   const res = await fetch(url);
   await logRequest({
     url,
@@ -72,12 +67,12 @@ async function saveImage(url) {
   });
   assert.equal(res.status, 200);
   const stream = Readable.fromWeb(res.body);
-  const tmp = `/data/scrape-image-temporary`;
+  const tmp = `data/scrape-image-temporary`;
   await fs.promises.writeFile(tmp, stream);
   await fs.promises.rename(tmp, destination);
 }
 
-async function getNewPosts(accessToken, after) {
+async function listSubreddit(sort, accessToken, after) {
   const subreddit = "ReactionMemes";
   const params = new URLSearchParams({
     limit: 100,
@@ -90,7 +85,7 @@ async function getNewPosts(accessToken, after) {
     Authorization: `Bearer ${accessToken}`,
     "User-Agent": getUserAgent(),
   };
-  const url = `https://oauth.reddit.com/r/${subreddit}/new.json?${params}`;
+  const url = `https://oauth.reddit.com/r/${subreddit}/${sort}.json?${params}`;
   const res = await fetch(url, { headers });
   const json = await res.json();
   await logRequest({
@@ -105,21 +100,24 @@ async function getNewPosts(accessToken, after) {
 
 async function* getImages(accessToken) {
   await fs.promises.mkdir("data/images", { recursive: true });
-  let after;
-  do {
-    const posts = await getNewPosts(accessToken, after);
-    after = posts.data.after;
-    for (const post of posts.data.children) {
-      if (post.data.media_preview) {
-        for (const media of Object.values(post.data.media_preview)) {
-          yield media.p.at(-1);
+  for (const sort of ["new", "top"]) {
+    let after;
+    do {
+      const posts = await listSubreddit(sort, accessToken, after);
+      after = posts.data.after;
+      for (const post of posts.data.children) {
+        if (post.data.media_preview) {
+          for (const media of Object.values(post.data.media_preview)) {
+            yield media.p.at(-1);
+          }
+        }
+        if (post.data.preview) {
+          yield post.data.preview.images[0].source.url;
         }
       }
-      if (post.data.preview) {
-        yield post.data.preview.images[0].source.url;
-      }
-    }
-  } while (after);
+      await setTimeout(1_000);
+    } while (after);
+  }
 }
 
 async function logRequest(data) {
