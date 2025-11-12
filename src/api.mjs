@@ -19,7 +19,7 @@ const encodingsFile = await fs.promises.readFile("data/encodings.json", {
   encoding: "utf8",
 });
 const encodings = JSON.parse(encodingsFile);
-const pageSize = 50;
+const maxResults = 1_000;
 
 class NotFoundError extends Error {}
 
@@ -98,7 +98,7 @@ async function getStaticFileResponse(url) {
 }
 
 function getIndexPageResponse() {
-  const files = encodings.map((encoding) => encoding.file).slice(0, pageSize);
+  const files = encodings.map((encoding) => encoding.file).slice(0, maxResults);
   return {
     status: 200,
     headers: { "Content-Type": "text/html" },
@@ -110,7 +110,7 @@ async function getSearchPageResponse(url) {
   const query = url.searchParams.get("query");
   const textVec = await encodeText(query);
   const results = [];
-  for (const encoding of encodings.slice(0, pageSize)) {
+  for (const encoding of encodings.slice(0, maxResults)) {
     const similarity = dotProduct(textVec, encoding.vector);
     results.push({ file: encoding.file, similarity });
   }
