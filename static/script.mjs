@@ -71,10 +71,9 @@ async function addImages() {
   const end = Math.min((page + 1) * pageSize, images.length);
   const columnCount = columns.children.length;
   for (let i = start; i < end; i++) {
-    const img = document.createElement("img");
-    img.src = `images/${images[i]}`;
+    const element = createElement(ImageElement, `images/${images[i]}`);
     const columnIndex = i % columnCount;
-    columns.children[columnIndex].appendChild(img);
+    columns.children[columnIndex].appendChild(element);
     // Let thread breathe
     await new Promise((r) => setTimeout(r, 0));
     if (addImagesCounter !== counter) {
@@ -86,6 +85,28 @@ async function addImages() {
 
 async function wait(ms) {
   await new Promise((r) => setTimeout(r, ms));
+}
+
+class ImageElement extends HTMLElement {
+  static render(src) {
+    return `<x-image><img src="${escapeHTML(src)}" /></x-image>`;
+  }
+}
+
+function parseHTML(html) {
+  let template = document.createElement("template");
+  template.innerHTML = html;
+  return template.content;
+}
+
+function escapeHTML(str) {
+  const element = document.createElement("div");
+  element.textContent = str;
+  return element.innerHTML;
+}
+
+function createElement(clazz, ...args) {
+  return parseHTML(clazz.render(...args)).children[0];
 }
 
 startInfiniteScrollLoop();
