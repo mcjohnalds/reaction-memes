@@ -5,7 +5,7 @@ const pageSize = 50;
 let images = window.initialImages;
 let addingImages = false;
 let page = 0;
-let loadCounter = 0;
+let searchCounter = 0;
 let addImagesCounter = 0;
 let searchTimeoutId = null;
 let resizeTimeoutId = null;
@@ -44,12 +44,12 @@ input.addEventListener("input", () => {
 });
 
 async function search() {
-  loadCounter++;
-  const counter = loadCounter;
+  searchCounter++;
+  const counter = searchCounter;
   const params = new URLSearchParams({ query: input.value });
   const res = await fetch(`/search?${params}`);
   const json = await res.json();
-  if (loadCounter !== counter) {
+  if (searchCounter !== counter) {
     return;
   }
   images = json;
