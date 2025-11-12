@@ -106,7 +106,7 @@ button:active {
   background-color: var(--foreground);
 }
 
-.columns {
+x-mosaic {
   display: flex;
   flex-direction: row;
   gap: 16px;
