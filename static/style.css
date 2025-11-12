@@ -4,6 +4,7 @@
   --tertiary: oklch(0.8774 0.1459 187.78);
   --background: #222;
   --foreground: #eee;
+  --placeholder: #aaa;
   font-family: "Molengo", sans-serif;
   letter-spacing: 0.1px;
 }
@@ -76,6 +77,10 @@ h2 {
   &:focus-within {
     outline: 1px solid var(--tertiary);
     outline-offset: 0;
+  }
+
+  svg {
+    color: var(--placeholder);
   }
 }
 
