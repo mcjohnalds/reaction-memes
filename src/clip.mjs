@@ -31,7 +31,7 @@ export async function encodeImages() {
     const file = files[i];
     const vector = await encodeImage(`data/images/${file}`);
     encodings.push({ file, vector });
-    process.stdout.write(`${i + 1}/${files.length}\n`);
+    process.stdout.write(`${i + 1} / ${files.length}\n`);
   }
   const json = JSON.stringify(encodings, null, 2);
   await fs.promises.writeFile("data/encodings.json", json);
