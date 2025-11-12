@@ -10,6 +10,7 @@ const contentTypes = new Map([
   [".jpg", "image/jpeg"],
   [".jpeg", "image/jpeg"],
   [".gif", "image/gif"],
+  [".svg", "image/svg+xml"],
   [".webp", "image/webp"],
   [".css", "text/css"],
   [".mjs", "text/javascript"],
@@ -136,14 +137,11 @@ function renderIndex(files) {
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="/style.css" type="text/css" />
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Rubik+Doodle+Shadow&display=swap" rel="stylesheet">
       </head>
       <body>
         <x-app>
-          <h1>Auto Reaction Meme</h1>
-          <h2>Type literally anything to find the perfect meme</h2>
+          <object class="title" data="/title.svg" type="image/svg+xml"></object>
+          <div class="subtitle">Search anything to find the perfect meme</div>
           <x-search-input>
             <!-- Material UI search icon -->
             <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>

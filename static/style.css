@@ -28,19 +28,12 @@ x-app {
   gap: 32px;
   margin: 16px 32px;
 
-  h1 {
-    margin: -8px 0;
-    font-weight: normal;
-    font-size: 48px;
-    font-variant: small-caps;
-    font-family: "Rubik Doodle Shadow", system-ui;
-    transform: scaleX(1.3);
-    transform-origin: 0 0;
-    align-self: flex-start;
-    letter-spacing: 0.5px;
+  .title {
+    height: 48px;
+    align-self: start;
   }
 
-  h2 {
+  .subtitle {
     margin: -8px 0;
     font-weight: normal;
     font-size: 24px;
