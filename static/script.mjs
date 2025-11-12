@@ -1,11 +1,48 @@
-const mosaic = document.body.querySelector("x-mosaic");
-const inputWrapper = document.body.querySelector(".inputWrapper");
-const input = document.body.querySelector("input");
-const pageSize = 50;
-let searchCounter = 0;
-let searchTimeoutId = null;
+class AppElement extends HTMLElement {
+  #searchCounter = 0;
+  #searchTimeoutId = null;
+
+  get #inputWrapper() {
+    return this.querySelector("& > .inputWrapper");
+  }
+
+  get #input() {
+    return this.querySelector("& > .inputWrapper > input");
+  }
+
+  get #mosaic() {
+    return this.querySelector("& > x-mosaic");
+  }
+
+  connectedCallback() {
+    this.#inputWrapper.addEventListener("click", () => {
+      this.#input.focus();
+    });
+    this.#input.addEventListener("input", () => {
+      if (this.#searchTimeoutId !== null) {
+        clearTimeout(this.#searchTimeoutId);
+      }
+      this.#searchTimeoutId = setTimeout(() => this.#search(), 400);
+    });
+    customElements.upgrade(this.#mosaic);
+    this.#mosaic.loadImages(window.initialImages);
+  }
+
+  async #search() {
+    this.#searchCounter++;
+    const counter = this.#searchCounter;
+    const params = new URLSearchParams({ query: this.#input.value });
+    const res = await fetch(`/search?${params}`);
+    const images = await res.json();
+    if (this.#searchCounter !== counter) {
+      return;
+    }
+    this.#mosaic.loadImages(images);
+  }
+}
 
 class MosaicElement extends HTMLElement {
+  static #pageSize = 50;
   #loading = false;
   #counter = 0;
   #images = [];
@@ -39,8 +76,11 @@ class MosaicElement extends HTMLElement {
     this.#loading = true;
     this.#counter++;
     const counter = this.#counter;
-    const start = this.#page * pageSize;
-    const end = Math.min((this.#page + 1) * pageSize, this.#images.length);
+    const start = this.#page * MosaicElement.#pageSize;
+    const end = Math.min(
+      (this.#page + 1) * MosaicElement.#pageSize,
+      this.#images.length,
+    );
     const columnCount = this.children.length;
     for (let i = start; i < end; i++) {
       const columnIndex = i % columnCount;
@@ -76,32 +116,9 @@ class MosaicElement extends HTMLElement {
   }
 }
 
-inputWrapper.addEventListener("click", () => {
-  input.focus();
-});
-
-input.addEventListener("input", () => {
-  if (searchTimeoutId !== null) {
-    clearTimeout(searchTimeoutId);
-  }
-  searchTimeoutId = setTimeout(search, 400);
-});
-
-async function search() {
-  searchCounter++;
-  const counter = searchCounter;
-  const params = new URLSearchParams({ query: input.value });
-  const res = await fetch(`/search?${params}`);
-  const images = await res.json();
-  if (searchCounter !== counter) {
-    return;
-  }
-  mosaic.loadImages(images);
-}
-
 async function wait(ms) {
   await new Promise((r) => setTimeout(r, ms));
 }
 
 customElements.define("x-mosaic", MosaicElement);
-mosaic.loadImages(window.initialImages);
+customElements.define("x-app", AppElement);
