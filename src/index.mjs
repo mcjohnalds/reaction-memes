@@ -5,6 +5,9 @@ if (command === "auth") {
 } else if (command === "scrape") {
   const reddit = await import("./reddit.mjs");
   await reddit.scrape();
+} else if (command === "scrape-shift") {
+  const redditShift = await import("./reddit-shift.mjs");
+  await redditShift.scrape();
 } else if (command === "encode") {
   const clip = await import("./clip.mjs");
   await clip.encodeImages();
