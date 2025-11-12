@@ -88,6 +88,7 @@ class MosaicElement extends HTMLElement {
     this.#loadPage();
   }
 
+  // Not pretty but optimized for good FPS. Do not change without profiling.
   async #loadPage() {
     this.#loading = true;
     this.#counter++;
@@ -101,11 +102,8 @@ class MosaicElement extends HTMLElement {
     for (let i = start; i < end; i++) {
       const columnIndex = i % columnCount;
       const src = `images/${this.#images[i]}`;
-      this.children[columnIndex].innerHTML += `
-        <a href="${src}" target="_blank">
-          <img src="${src}" />
-        </a>
-      `;
+      const item = this.#createItem(src);
+      this.children[columnIndex].appendChild(item);
       // Let thread breathe
       await new Promise((r) => setTimeout(r, 0));
       if (this.#counter !== counter) {
@@ -113,6 +111,18 @@ class MosaicElement extends HTMLElement {
       }
     }
     this.#loading = false;
+  }
+
+  #createItem(src) {
+    // Calling createElement instead of using innerHTML or something boosts FPS
+    // a ton
+    const a = document.createElement("a");
+    a.href = src;
+    a.target = "_blank";
+    const img = document.createElement("img");
+    img.src = src;
+    a.appendChild(img);
+    return a;
   }
 
   async #startInfiniteScrollLoop() {
