@@ -2,12 +2,8 @@ class AppElement extends HTMLElement {
   #searchCounter = 0;
   #searchTimeoutId = null;
 
-  get #inputWrapper() {
-    return this.querySelector("& > .inputWrapper");
-  }
-
   get #input() {
-    return this.querySelector("& > .inputWrapper > input");
+    return this.querySelector("& > x-search-input");
   }
 
   get #mosaic() {
@@ -15,15 +11,13 @@ class AppElement extends HTMLElement {
   }
 
   connectedCallback() {
-    this.#inputWrapper.addEventListener("click", () => {
-      this.#input.focus();
-    });
     this.#input.addEventListener("input", () => {
       if (this.#searchTimeoutId !== null) {
         clearTimeout(this.#searchTimeoutId);
       }
       this.#searchTimeoutId = setTimeout(() => this.#search(), 400);
     });
+    // TODO: do i need this
     customElements.upgrade(this.#mosaic);
     this.#mosaic.loadImages(window.initialImages);
   }
@@ -38,6 +32,25 @@ class AppElement extends HTMLElement {
       return;
     }
     this.#mosaic.loadImages(images);
+  }
+}
+
+class SearchInput extends HTMLElement {
+  get value() {
+    return this.#input.value;
+  }
+
+  get #input() {
+    return this.querySelector("input");
+  }
+
+  connectedCallback() {
+    this.addEventListener("click", () => {
+      this.#input.focus();
+    });
+    this.#input.addEventListener("input", () => {
+      this.dispatchEvent(new Event("input"));
+    });
   }
 }
 
@@ -58,7 +71,10 @@ class MosaicElement extends HTMLElement {
       if (this.#resizeTimeoutId !== null) {
         clearTimeout(this.#resizeTimeoutId);
       }
-      this.#resizeTimeoutId = setTimeout(() => this.loadImages(), 100);
+      this.#resizeTimeoutId = setTimeout(
+        () => this.loadImages(this.#images),
+        100,
+      );
     });
     this.#loadPage();
     this.#startInfiniteScrollLoop();
@@ -86,9 +102,9 @@ class MosaicElement extends HTMLElement {
       const columnIndex = i % columnCount;
       const src = `images/${this.#images[i]}`;
       this.children[columnIndex].innerHTML += `
-        <x-image>
+        <a href="${src}" target="_blank">
           <img src="${src}" />
-        </x-image>
+        </a>
       `;
       // Let thread breathe
       await new Promise((r) => setTimeout(r, 0));
@@ -120,5 +136,6 @@ async function wait(ms) {
   await new Promise((r) => setTimeout(r, ms));
 }
 
+customElements.define("x-search-input", SearchInput);
 customElements.define("x-mosaic", MosaicElement);
 customElements.define("x-app", AppElement);

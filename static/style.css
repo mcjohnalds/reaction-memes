@@ -28,7 +28,7 @@ x-app {
   gap: 32px;
   margin: 16px 32px;
 
-  & > h1 {
+  h1 {
     margin: -8px 0;
     font-weight: normal;
     font-size: 48px;
@@ -40,7 +40,7 @@ x-app {
     letter-spacing: 0.5px;
   }
 
-  & > h2 {
+  h2 {
     margin: -8px 0;
     font-weight: normal;
     font-size: 24px;
@@ -48,39 +48,39 @@ x-app {
     align-self: flex-start;
     letter-spacing: 0.2px;
   }
+}
 
-  & > .inputWrapper {
-    display: flex;
-    flex-direction: row;
-    border: 2px solid var(--foreground);
-    background: var(--background);
-    gap: 8px;
-    padding: 0 8px;
-    align-items: center;
+x-search-input {
+  display: flex;
+  flex-direction: row;
+  border: 2px solid var(--foreground);
+  background: var(--background);
+  gap: 8px;
+  padding: 0 8px;
+  align-items: center;
 
-    & > input {
-      font-family: "Molengo", sans-serif;
-      padding: 8px 0;
-      flex: 1;
-      border-radius: 0;
-      background: none;
-      border: none;
-      font-size: 16px;
-      color: var(--foreground);
-    }
+  &:focus-within {
+    outline: 1px solid var(--tertiary);
+    outline-offset: 0;
+  }
 
-    & > input:focus {
-      outline: none;
-    }
+  input {
+    font-family: "Molengo", sans-serif;
+    padding: 8px 0;
+    flex: 1;
+    border-radius: 0;
+    background: none;
+    border: none;
+    font-size: 16px;
+    color: var(--foreground);
+  }
 
-    &:focus-within {
-      outline: 1px solid var(--tertiary);
-      outline-offset: 0;
-    }
+  input:focus {
+    outline: none;
+  }
 
-    & > svg {
-      color: var(--placeholder);
-    }
+  svg {
+    color: var(--placeholder);
   }
 }
 
@@ -89,20 +89,18 @@ x-mosaic {
   flex-direction: row;
   gap: 16px;
 
-  & > div {
+  div {
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: 16px;
-
-    & > x-image {
-      width: 100%;
-    }
   }
-}
 
-x-image {
-  & > img {
+  a {
+    width: 100%;
+  }
+
+  img {
     width: 100%;
     height: 100%;
   }
