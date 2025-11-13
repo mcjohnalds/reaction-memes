@@ -27,11 +27,12 @@ const processor = await AutoProcessor.from_pretrained(
 export async function encodeImages() {
   const encodings = [];
   const files = await fs.promises.readdir("data/images");
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
+  for (const [i, file] of files.entries()) {
     const vector = await encodeImage(`data/images/${file}`);
     encodings.push({ file, vector });
-    process.stdout.write(`${i + 1} / ${files.length}\n`);
+    if (i % 100 === 0) {
+      process.stdout.write(`${i + 1} / ${files.length}\n`);
+    }
   }
   const json = JSON.stringify(encodings, null, 2);
   await fs.promises.writeFile("data/encodings.json", json);

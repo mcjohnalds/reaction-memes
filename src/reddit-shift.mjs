@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { setTimeout } from "node:timers/promises";
-import { Readable } from "node:stream";
 import fs from "node:fs";
+import sharp from "sharp";
 
 const requestLogFilePath = "data/reddit-shift-requests.jsonl";
 const notFoundFilePath = "data/reddit-not-found.txt";
@@ -10,28 +10,16 @@ const postsFilePath = "data/shift/reactionmemes.jsonl";
 class NotFoundError extends Error {}
 
 export async function scrape() {
-  let notFoundFile = "";
-  try {
-    notFoundFile = await fs.promises.readFile(notFoundFilePath, {
-      encoding: "utf8",
-    });
-  } catch {}
-  const notFoundUrls = notFoundFile.trim().split("\n");
   await fs.promises.rm(requestLogFilePath, { force: true });
-  const postsFile = await fs.promises.readFile(postsFilePath, {
-    encoding: "utf8",
-  });
-  const posts = postsFile
-    .trim()
-    .split("\n")
-    .map((line) => JSON.parse(line));
+  const notFoundUrls = await readNotFoundFile();
+  const posts = await readPostsFile();
   let n = 0;
   for (const post of posts) {
     if (post.score < 10) {
       // Ignore low-quality posts
       continue;
     }
-    let images = [];
+    let urls = [];
     if (post.media_metadata) {
       for (const media of Object.values(post.media_metadata)) {
         // Some medias have a "failed" status, indicating the media is broken.
@@ -39,43 +27,49 @@ export async function scrape() {
         //
         // Some medias are gifs which we don't want and they lack a u field
         if (media.s?.u) {
-          images.push(media.s.u);
+          urls.push(media.s.u);
         }
       }
     } else if (post.preview) {
-      images.push(post.preview.images[0].source.url);
+      urls.push(post.preview.images[0].source.url);
     }
-    for (const image of images) {
+    for (const url of urls) {
       n++;
-      const fileName = new URL(image).pathname.substring(1);
-      const destination = `data/images/${fileName}`;
+      const fileName = new URL(url).pathname.substring(1);
+      const base = fileName.split(".").at(-2);
+      const destination = `data/images/${base}.webp`;
       const exists = await fs.promises
         .access(destination)
         .then(() => true)
         .catch(() => false);
       if (exists) {
-        process.stdout.write(`${n} exists ${fileName}\n`);
-      } else if (notFoundUrls.includes(image)) {
-        process.stdout.write(`${n} 404 ${fileName}\n`);
+        process.stdout.write(`${n} exists ${destination}\n`);
+      } else if (notFoundUrls.includes(url)) {
+        process.stdout.write(`${n} 404 ${destination}\n`);
       } else {
+        let bytes;
         try {
-          await saveImage(destination, image);
-          process.stdout.write(`${n} saved ${fileName}\n`);
-          await setTimeout(1_000);
+          bytes = await getImage(url);
         } catch (error) {
           if (error instanceof NotFoundError) {
-            await appendNotFound(image);
-            process.stdout.write(`${n} 404 ${fileName}\n`);
+            await appendNotFound(url);
+            process.stdout.write(`${n} 404 ${destination}\n`);
             continue;
           }
           throw error;
         }
+        // Wait to prevent API rate limit
+        await setTimeout(1_000);
+        const tmp = "data/reddit-shift-temporary.webp";
+        await sharp(bytes).webp().toFile(tmp);
+        await fs.promises.rename(tmp, destination);
+        process.stdout.write(`${n} saved ${destination}\n`);
       }
     }
   }
 }
 
-async function saveImage(destination, url) {
+async function getImage(url) {
   let i = 0;
   while (true) {
     try {
@@ -98,15 +92,13 @@ async function saveImage(destination, url) {
         throw new NotFoundError();
       }
       assert.equal(res.status, 200);
-      const stream = Readable.fromWeb(res.body);
-      const tmp = `data/scrape-image-temporary`;
-      await fs.promises.writeFile(tmp, stream);
-      await fs.promises.rename(tmp, destination);
+      return res.bytes();
     } catch (error) {
+      process.stdout.write(`Retrying ${error}\n`);
       if (i === 9) {
         throw new Error("Retries exceeded", { cause: error });
       }
-      await setTimeout(2 ** i);
+      await setTimeout(2 ** i * 1000);
     }
   }
 }
@@ -119,4 +111,24 @@ async function logRequest(data) {
 
 async function appendNotFound(url) {
   await fs.promises.appendFile(notFoundFilePath, url + "\n");
+}
+
+async function readNotFoundFile() {
+  try {
+    const notFoundFile = await fs.promises.readFile(notFoundFilePath, {
+      encoding: "utf8",
+    });
+    return notFoundFile.trim().split("\n");
+  } catch {}
+  return [];
+}
+
+async function readPostsFile() {
+  const postsFile = await fs.promises.readFile(postsFilePath, {
+    encoding: "utf8",
+  });
+  return postsFile
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
 }
