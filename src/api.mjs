@@ -2,8 +2,10 @@ import * as http from "node:http";
 import { Readable } from "node:stream";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as util from "node:util";
 import { encodeText } from "./clip.mjs";
 
+const maxResults = 500;
 const contentTypes = new Map([
   [".ico", "image/x-icon"],
   [".svg", "image/svg+xml"],
@@ -12,25 +14,21 @@ const contentTypes = new Map([
   [".mjs", "text/javascript"],
   [".webmanifest", "application/manifest+json"],
 ]);
-const encodingsFile = await fs.promises.readFile("data/encodings.json", {
-  encoding: "utf8",
-});
-const encodings = JSON.parse(encodingsFile);
-const maxResults = 500;
+const encodings = await readEncodingsFile();
 
-class NotFoundError extends Error {}
-
-export function createServer() {
-  return http.createServer(handleRequest);
-}
-
-async function handleRequest(req, res) {
-  const { status, headers, body } = await getResponse(req);
-  res.writeHead(status, headers);
-  if (body) {
-    body.pipe(res);
-  } else {
-    res.end();
+async function handleRequest(request, response) {
+  try {
+    writeLog({ type: "request", request });
+    const { status, headers, body, error } = await getReply(request);
+    response.writeHead(status, headers);
+    if (body) {
+      body.pipe(response);
+    } else {
+      response.end();
+    }
+    writeLog({ type: "response", request, status, error });
+  } catch (error) {
+    writeLog({ type: "error", request, error });
   }
 }
 
@@ -42,34 +40,29 @@ function dotProduct(a, b) {
   return sum;
 }
 
-async function getResponse(req) {
+async function getReply(request) {
   try {
-    if (req.method !== "GET") {
-      throw new NotFoundError();
-    }
-    const url = new URL(`https://example.com${req.url}`);
-    if (url.pathname === "/") {
-      return getIndexPageResponse();
-    } else if (url.pathname === "/search") {
-      return await getSearchPageResponse(url);
-    }
-    return await getStaticFileResponse(url);
-  } catch (error) {
-    if (error instanceof NotFoundError) {
+    if (request.method !== "GET") {
       return { status: 404 };
-    } else {
-      console.error(error);
-      return { status: 500 };
     }
+    const url = new URL(`https://example.com${request.url}`);
+    if (url.pathname === "/") {
+      return getIndexPageReply();
+    } else if (url.pathname === "/search") {
+      return await getSearchPageReply(url);
+    }
+    return await getStaticFileReply(url);
+  } catch (error) {
+    return { status: 500, error };
   }
 }
 
-async function getStaticFileResponse(url) {
+async function getStaticFileReply(url) {
   let cacheControl;
   if (url.pathname.includes("..")) {
     // This is probably redundant but worth it just in case there is a bug in
     // the logic
-    throw new NotFoundError();
+    return { status: 404 };
   }
   let file;
   if (
@@ -84,12 +77,12 @@ async function getStaticFileResponse(url) {
   try {
     await fs.promises.access(file);
   } catch (error) {
-    throw new NotFoundError();
+    return { status: 404 };
   }
   const ext = path.extname(file);
   const contentType = contentTypes.get(ext);
   if (!contentType) {
-    throw new NotFoundError();
+    return { status: 404 };
   }
   const stream = fs.createReadStream(file);
   return {
@@ -102,7 +95,7 @@ async function getStaticFileResponse(url) {
   };
 }
 
-function getIndexPageResponse() {
+function getIndexPageReply() {
   const files = encodings.map((encoding) => encoding.file).slice(0, maxResults);
   return {
     status: 200,
@@ -111,7 +104,7 @@ function getIndexPageResponse() {
   };
 }
 
-async function getSearchPageResponse(url) {
+async function getSearchPageReply(url) {
   const query = url.searchParams.get("query");
   const textVec = await encodeText(query);
   const results = [];
@@ -156,3 +149,33 @@ function renderIndex(files) {
     </html>
   `;
 }
+
+async function readEncodingsFile() {
+  const encodingsFile = await fs.promises.readFile("data/encodings.json", {
+    encoding: "utf8",
+  });
+  return JSON.parse(encodingsFile);
+}
+
+function writeLog({ type, request, error, status }) {
+  const str = JSON.stringify({
+    type,
+    time: new Date().toISOString(),
+    method: request?.method,
+    url: request?.url,
+    status,
+    error:
+      error &&
+      util.inspect(error, {
+        depth: 5,
+        showHidden: true,
+        maxArrayLength: 1_000,
+      }),
+    remoteAddress: request?.socket.remoteAddress,
+  });
+  process.stdout.write(str + "\n");
+}
+
+const server = http.createServer(handleRequest);
+server.on("listening", () => writeLog({ type: "listening" }));
+server.listen(8080);

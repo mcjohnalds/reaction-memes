@@ -15,9 +15,7 @@ if (command === "auth") {
   const thumbnail = await import("./thumbnail.mjs");
   await thumbnail.generate();
 } else if (command === "server") {
-  const api = await import("./api.mjs");
-  const server = api.createServer();
-  server.listen(8080);
+  await import("./api.mjs");
 } else if (command === "clean") {
   const fs = await import("node:fs");
   await fs.promises.rm("data/images", { recursive: true, force: true });
