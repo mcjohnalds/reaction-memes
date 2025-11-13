@@ -7,7 +7,12 @@ export async function generate() {
   const images = await fs.promises.readdir("data/images");
   for (const [i, image] of images.entries()) {
     await sharp(`data/images/${image}`)
-      .resize(200)
+      .resize({
+        width: 200,
+        height: 200,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
       .webp()
       .toFile(`data/thumbnails/${image}`);
     if (i % 100 === 0) {
