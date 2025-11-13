@@ -11,6 +11,9 @@ if (command === "auth") {
 } else if (command === "encode") {
   const clip = await import("./clip.mjs");
   await clip.encodeImages();
+} else if (command === "thumbnail") {
+  const thumbnail = await import("./thumbnail.mjs");
+  await thumbnail.generate();
 } else if (command === "server") {
   const api = await import("./api.mjs");
   const server = api.createServer();

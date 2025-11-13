@@ -76,7 +76,10 @@ async function getStaticFileResponse(url) {
     throw new NotFoundError();
   }
   let file;
-  if (url.pathname.startsWith("/images/")) {
+  if (
+    url.pathname.startsWith("/images/") ||
+    url.pathname.startsWith("/thumbnails")
+  ) {
     cacheControl = "public, max-age=31536000, immutable";
     file = path.join("data", url.pathname);
   } else {

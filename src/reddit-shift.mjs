@@ -26,7 +26,6 @@ export async function scrape() {
     .split("\n")
     .map((line) => JSON.parse(line));
   let n = 0;
-  // TODO: flatten
   for (const post of posts) {
     if (post.score < 10) {
       // Ignore low-quality posts
@@ -77,22 +76,39 @@ export async function scrape() {
 }
 
 async function saveImage(destination, url) {
-  const res = await fetch(url, {
-    headers: { "user-agent": "curl/8.1.2" },
-  });
-  await logRequest({
-    url,
-    status: res.status,
-    headers: res.headers,
-  });
-  if (res.status === 404) {
-    throw new NotFoundError();
+  let i = 0;
+  while (true) {
+    try {
+      const res = await fetch(url, {
+        headers: { "user-agent": "curl/8.1.2" },
+      });
+      const log = {
+        timestamp: new Date().toISOString(),
+        url,
+        status: res.status,
+        headers: res.headers,
+      };
+      const logStr = JSON.stringify(log) + "\n";
+      await fs.promises.appendFile(requestLogFilePath, logStr);
+      if (res.status === 404) {
+        throw new NotFoundError();
+      }
+      // Very rare. No idea what it means. Equivalent to 404.
+      if (res.status === 403) {
+        throw new NotFoundError();
+      }
+      assert.equal(res.status, 200);
+      const stream = Readable.fromWeb(res.body);
+      const tmp = `data/scrape-image-temporary`;
+      await fs.promises.writeFile(tmp, stream);
+      await fs.promises.rename(tmp, destination);
+    } catch (error) {
+      if (i === 9) {
+        throw new Error("Retries exceeded", { cause: error });
+      }
+      await setTimeout(2 ** i);
+    }
   }
-  assert.equal(res.status, 200);
-  const stream = Readable.fromWeb(res.body);
-  const tmp = `data/scrape-image-temporary`;
-  await fs.promises.writeFile(tmp, stream);
-  await fs.promises.rename(tmp, destination);
 }
 
 async function logRequest(data) {
