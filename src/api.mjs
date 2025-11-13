@@ -6,10 +6,6 @@ import { encodeText } from "./clip.mjs";
 
 const contentTypes = new Map([
   [".ico", "image/x-icon"],
-  [".png", "image/png"],
-  [".jpg", "image/jpeg"],
-  [".jpeg", "image/jpeg"],
-  [".gif", "image/gif"],
   [".svg", "image/svg+xml"],
   [".webp", "image/webp"],
   [".css", "text/css"],

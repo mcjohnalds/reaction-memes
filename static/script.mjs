@@ -101,8 +101,7 @@ class MosaicElement extends HTMLElement {
     const columnCount = this.children.length;
     for (let i = start; i < end; i++) {
       const columnIndex = i % columnCount;
-      const src = `images/${this.#images[i]}`;
-      const item = this.#createItem(src);
+      const item = this.#createItem(this.#images[i]);
       this.children[columnIndex].appendChild(item);
       // Let thread breathe
       await new Promise((r) => setTimeout(r, 0));
@@ -113,14 +112,14 @@ class MosaicElement extends HTMLElement {
     this.#loading = false;
   }
 
-  #createItem(src) {
+  #createItem(image) {
     // Calling createElement instead of using innerHTML or something boosts FPS
     // a ton
     const a = document.createElement("a");
-    a.href = src;
+    a.href = `/images/${image}`;
     a.target = "_blank";
     const img = document.createElement("img");
-    img.src = src;
+    img.src = `/thumbnails/${image}`;
     a.appendChild(img);
     return a;
   }
