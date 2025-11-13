@@ -41,23 +41,12 @@ export async function encodeImages() {
 export async function encodeText(text) {
   const inputs = await tokenizer(text);
   const output = await textModel(inputs);
-  const v = Array.from(output.text_embeds.data);
-  return normalizeVector(v);
+  return Array.from(output.text_embeds.normalize().data);
 }
 
 async function encodeImage(imagePath) {
   const image = await RawImage.read(imagePath);
   const inputs = await processor(image);
   const output = await visionModel(inputs);
-  const v = Array.from(output.image_embeds.data);
-  return normalizeVector(v);
-}
-
-function normalizeVector(vec) {
-  let norm = 0;
-  for (let i = 0; i < vec.length; i++) {
-    norm += vec[i] * vec[i];
-  }
-  norm = Math.sqrt(norm);
-  return vec.map((x) => x / norm);
+  return Array.from(output.image_embeds.normalize().data);
 }
