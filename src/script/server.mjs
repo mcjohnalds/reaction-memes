@@ -165,6 +165,7 @@ async function readEncodingsFile() {
 
 function writeLog({ type, request, error, status }) {
   const str = JSON.stringify({
+    version: 1,
     type,
     time: new Date().toISOString(),
     method: request?.method,
