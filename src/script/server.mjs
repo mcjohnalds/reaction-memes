@@ -177,7 +177,8 @@ function writeLog({ type, request, error, status }) {
         showHidden: true,
         maxArrayLength: 1_000,
       }),
-    remoteAddress: request?.socket.remoteAddress,
+    ip: request.headers["cf-connecting-ip"],
+    country: request.headers["cf-ipcountry"],
   });
   process.stdout.write(str + "\n");
 }
