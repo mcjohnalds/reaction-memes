@@ -2,7 +2,6 @@ import * as http from "node:http";
 import { Readable } from "node:stream";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import * as util from "node:util";
 import { encodeText } from "../clip.mjs";
 
 const maxResults = 500;
@@ -18,23 +17,25 @@ const encodings = await readEncodingsFile();
 
 function main() {
   const server = http.createServer(handleRequest);
-  server.on("listening", () => writeLog({ type: "listening" }));
+  server.on("listening", () => console.log("Listening"));
   server.listen(8080);
 }
 
 async function handleRequest(request, response) {
   try {
-    writeLog({ type: "request", request });
     const { status, headers, body, error } = await getReply(request);
+    if (error) {
+      console.error(error);
+    }
+    logRequest(request, status);
     response.writeHead(status, headers);
     if (body) {
       body.pipe(response);
     } else {
       response.end();
     }
-    writeLog({ type: "response", request, status, error });
   } catch (error) {
-    writeLog({ type: "error", request, error });
+    console.error(error);
   }
 }
 
@@ -163,25 +164,17 @@ async function readEncodingsFile() {
   return JSON.parse(encodingsFile);
 }
 
-function writeLog({ type, request, error, status }) {
-  const str = JSON.stringify({
-    version: 1,
-    type,
-    time: new Date().toISOString(),
-    method: request?.method,
-    url: request?.url,
+function logRequest(request, status) {
+  const values = [
     status,
-    error:
-      error &&
-      util.inspect(error, {
-        depth: 5,
-        showHidden: true,
-        maxArrayLength: 1_000,
-      }),
-    ip: request?.headers["cf-connecting-ip"],
-    country: request?.headers["cf-ipcountry"],
-  });
-  process.stdout.write(str + "\n");
+    request.method,
+    request.url,
+    request.headers["cf-connecting-ip"],
+    request.headers["cf-ipcountry"],
+    request.headers["user-agent"],
+    request.headers["referer"],
+  ];
+  console.log(values.join("\t"));
 }
 
 main();
