@@ -165,16 +165,17 @@ async function readEncodingsFile() {
 }
 
 function logRequest(request, status) {
-  const values = [
+  const log = {
     status,
-    request.method,
-    request.url,
-    request.headers["cf-connecting-ip"],
-    request.headers["cf-ipcountry"],
-    request.headers["user-agent"],
-    request.headers["referer"],
-  ];
-  console.log(values.join("\t"));
+    method: request.method,
+    url: request.url,
+    ip: request.headers["cf-connecting-ip"],
+    country: request.headers["cf-ipcountry"],
+    agent: request.headers["user-agent"],
+    referer: request.headers["referer"],
+    date: new Date().toISOString(),
+  };
+  console.log(JSON.stringify(log));
 }
 
 main();
