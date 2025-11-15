@@ -9,7 +9,7 @@ const postsFilePath = "data/shift/reactionmemes.jsonl";
 
 class NotFoundError extends Error {}
 
-export async function scrape() {
+async function main() {
   await fs.promises.rm(requestLogFilePath, { force: true });
   const notFoundUrls = await readNotFoundFile();
   const posts = await readPostsFile();
@@ -132,3 +132,5 @@ async function readPostsFile() {
     .split("\n")
     .map((line) => JSON.parse(line));
 }
+
+main();

@@ -2,10 +2,6 @@
   "name": "reaction-memes",
   "version": "0.1.0",
   "description": "",
-  "scripts": {
-    "start": "node --env-file=.env src/index.mjs",
-    "start-watch": "node --env-file=.env --watch src/index.mjs"
-  },
   "keywords": [],
   "author": "",
   "license": "UNLICENSED",

@@ -1,4 +1,4 @@
-import { createServer } from "./api.mjs";
+import { createServer } from "./server.mjs";
 import fs from "node:fs";
 import { test, after } from "node:test";
 import assert from "node:assert/strict";

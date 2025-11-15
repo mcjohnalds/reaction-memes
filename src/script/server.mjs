@@ -3,7 +3,7 @@ import { Readable } from "node:stream";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as util from "node:util";
-import { encodeText } from "./clip.mjs";
+import { encodeText } from "../clip.mjs";
 
 const maxResults = 500;
 const contentTypes = new Map([
@@ -15,6 +15,12 @@ const contentTypes = new Map([
   [".webmanifest", "application/manifest+json"],
 ]);
 const encodings = await readEncodingsFile();
+
+function main() {
+  const server = http.createServer(handleRequest);
+  server.on("listening", () => writeLog({ type: "listening" }));
+  server.listen(8080);
+}
 
 async function handleRequest(request, response) {
   try {
@@ -176,6 +182,4 @@ function writeLog({ type, request, error, status }) {
   process.stdout.write(str + "\n");
 }
 
-const server = http.createServer(handleRequest);
-server.on("listening", () => writeLog({ type: "listening" }));
-server.listen(8080);
+main();
