@@ -1,4 +1,5 @@
 import * as http from "node:http";
+import { dotProduct } from "./math.mjs";
 import assert from "node:assert";
 import { Readable } from "node:stream";
 import * as fs from "node:fs";
@@ -40,14 +41,6 @@ async function handleRequest(request, response) {
   } catch (error) {
     console.error(error);
   }
-}
-
-function dotProduct(a, b) {
-  let sum = 0;
-  for (let i = 0; i < a.length; i++) {
-    sum += a[i] * b[i];
-  }
-  return sum;
 }
 
 async function getReply(request) {

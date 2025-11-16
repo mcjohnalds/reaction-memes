@@ -5,6 +5,7 @@
 
 import fs from "node:fs";
 import http from "node:http";
+import { dotProduct } from "../math.mjs";
 
 const threshold = 0.97;
 
@@ -75,14 +76,6 @@ async function handleRequest(request, response, groups) {
   }
   response.writeHead(404);
   response.end();
-}
-
-function dotProduct(a, b) {
-  let sum = 0;
-  for (let i = 0; i < a.length; i++) {
-    sum += a[i] * b[i];
-  }
-  return sum;
 }
 
 async function readEncodingsFile() {
