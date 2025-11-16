@@ -21,7 +21,11 @@ case "$output" in
   *"Updating"*)
     echo
     echo npm install
-    npm install
+    output=$(npm install)
+    if [ "$?" -ne 0 ]; then
+      echo "$output"
+      exit 1
+    fi
 
     echo
     echo systemctl restart reaction-memes
@@ -35,7 +39,7 @@ case "$output" in
 esac
 
 echo
-echo curl
+echo curl http://localhost:8080
 i=0
 until curl -sfI -o /dev/null http://localhost:8080; do
   sleep 0.1
@@ -45,13 +49,13 @@ until curl -sfI -o /dev/null http://localhost:8080; do
     exit 1
   fi
 done
-
-echo
-echo Server is up.
-echo Deploy complete.
 EOF
 
-if [ "$?" -ne 0 ]; then
+if [ "$?" -eq 0 ]; then
+  echo
+  echo deploy.sh succeeded
+else
+  echo
   echo deploy.sh failed
   exit 1
 fi
