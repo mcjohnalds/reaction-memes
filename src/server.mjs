@@ -1,4 +1,5 @@
 import * as http from "node:http";
+import assert from "node:assert";
 import { Readable } from "node:stream";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -13,7 +14,7 @@ const contentTypes = new Map([
   [".mjs", "text/javascript"],
   [".webmanifest", "application/manifest+json"],
 ]);
-const encodings = await readEncodingsFile();
+const encodings = await getEncodings();
 
 export function createServer() {
   return http.createServer(handleRequest);
@@ -165,11 +166,24 @@ function renderIndex(files) {
   `;
 }
 
-async function readEncodingsFile() {
+async function getEncodings() {
   const encodingsFile = await fs.promises.readFile("data/encodings.json", {
     encoding: "utf8",
   });
-  return JSON.parse(encodingsFile);
+  const encodings = JSON.parse(encodingsFile);
+  const similarFile = await fs.promises.readFile("data/similar.json", {
+    encoding: "utf8",
+  });
+  const groups = JSON.parse(similarFile);
+  const ignore = new Set();
+  for (const group of groups) {
+    for (const image of group.slice(1)) {
+      ignore.add(image);
+    }
+  }
+  const filtered = encodings.filter((encoding) => !ignore.has(encoding.file));
+  assert(encodings.length > filtered.length);
+  return filtered;
 }
 
 function logRequest(request, status, duration) {

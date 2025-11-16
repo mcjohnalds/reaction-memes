@@ -27,7 +27,7 @@ async function main() {
 async function getGroups() {
   const encodings = await readEncodingsFile();
   const groups = [];
-  const taken = new Map();
+  const taken = new Set();
   for (let i = 0; i < encodings.length - 1; i++) {
     if (taken.has(i)) {
       continue;
@@ -39,12 +39,12 @@ async function getGroups() {
       const b = encodings[j];
       const similarity = dotProduct(a.vector, b.vector);
       if (similarity > threshold) {
-        taken.set(j, true);
+        taken.add(j);
         group.push(b.file);
       }
     }
     if (group.length > 1) {
-      taken.set(i, true);
+      taken.add(i);
       groups.push(group);
     }
   }
