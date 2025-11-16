@@ -2,6 +2,7 @@ import { createServer } from "./server.mjs";
 import fs from "node:fs";
 import { test, after, before, suite } from "node:test";
 import assert from "node:assert/strict";
+import { stressTest } from "./stress.mjs";
 
 let server;
 
@@ -107,6 +108,16 @@ suite("/does-not-exist.mjs", () => {
   test("HEAD", async () => {
     const res = await request("/does-not-exist.mjs", { method: "HEAD" });
     assert.equal(res.status, 404);
+  });
+});
+
+test("stress test", async () => {
+  await stressTest({
+    targetRequestsPerSecond: 100,
+    stressTestDuration: 2000,
+    lagLimit: 10,
+    port: 8081,
+    log: false,
   });
 });
 
