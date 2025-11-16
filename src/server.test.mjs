@@ -33,13 +33,21 @@ suite("/", () => {
 });
 
 suite("/search", () => {
-  test("GET", async () => {
-    const res = await request("/search?query=foo%20bar");
-    assert.equal(res.status, 200);
-    assert.equal(res.headers.get("Content-Type"), "application/json");
-    const json = await res.json();
-    assert(Array.isArray(json));
-    await fs.promises.access(`data/images/${json[0]}`);
+  suite("GET", () => {
+    test("valid input", async () => {
+      const res = await request("/search?query=foo%20bar");
+      assert.equal(res.status, 200);
+      assert.equal(res.headers.get("Content-Type"), "application/json");
+      const json = await res.json();
+      assert(Array.isArray(json));
+      await fs.promises.access(`data/images/${json[0]}`);
+    });
+
+    test("large input", async () => {
+      const query = "a".repeat(200);
+      const res = await request(`/search?query=${query}`);
+      assert.equal(res.status, 400);
+    });
   });
 
   test("HEAD", async () => {
