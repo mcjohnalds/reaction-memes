@@ -10,9 +10,16 @@ process.title = "reaction-memes-stress";
 const devNull = fs.createWriteStream("/dev/null");
 devNull.setMaxListeners(0);
 let requests = 0;
+const times = [];
 while (true) {
+  times.push(performance.now());
+  if (times.length > 20) {
+    times.shift();
+    const averageDuration = getAverageDuration();
+    const rate = Math.floor((1 / averageDuration) * 1000);
+    console.log(`lag=${requests} rate=${rate}`);
+  }
   await timers.promises.setTimeout(millisecondsPerRequest);
-  console.log(requests);
   requests++;
   fetch(`http://localhost:8080${path}`, {
     signal: AbortSignal.timeout(1000),
@@ -21,4 +28,12 @@ while (true) {
     Readable.fromWeb(res.body).pipe(devNull);
     assert.equal(res.status, 200);
   });
+}
+
+function getAverageDuration() {
+  let sum = 0;
+  for (let i = 1; i < times.length; i++) {
+    sum += times[i] - times[i - 1];
+  }
+  return sum / (times.length - 1);
 }

@@ -21,11 +21,15 @@ export function createServer() {
 
 async function handleRequest(request, response) {
   try {
+    let start = performance.now();
     const { status, headers, body, error } = await getReply(request);
+    request.on("end", () => {
+      const end = performance.now();
+      logRequest(request, status, end - start);
+    });
     if (error) {
       console.error(error);
     }
-    logRequest(request, status);
     response.writeHead(status, headers);
     if (body) {
       body.pipe(response);
@@ -163,13 +167,14 @@ async function readEncodingsFile() {
   return JSON.parse(encodingsFile);
 }
 
-function logRequest(request, status) {
+function logRequest(request, status, duration) {
   const log = {
     status,
     method: request.method,
     url: request.url,
     ip: request.headers["cf-connecting-ip"],
     country: request.headers["cf-ipcountry"],
+    duration: Math.round(duration),
     agent: request.headers["user-agent"],
     referer: request.headers["referer"],
     date: new Date().toISOString(),
