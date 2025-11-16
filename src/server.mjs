@@ -123,12 +123,12 @@ async function getSearchPageReply(url) {
   }
   const textVec = await encodeText(query);
   const results = [];
-  for (const encoding of encodings.slice(0, maxResults)) {
+  for (const encoding of encodings) {
     const similarity = dotProduct(textVec, encoding.vector);
     results.push({ file: encoding.file, similarity });
   }
   results.sort((a, b) => b.similarity - a.similarity);
-  const files = results.map((result) => result.file);
+  const files = results.slice(0, maxResults).map((result) => result.file);
   const json = JSON.stringify(files);
   return {
     status: 200,
@@ -148,7 +148,7 @@ function renderIndex(files) {
       <body>
         <x-app>
           <object class="title" data="/title.svg" type="image/svg+xml"></object>
-          <div class="subtitle">Search anything to find the perfect meme</div>
+          <div class="subtitle">Type anything to find the perfect meme</div>
           <x-search-input>
             <!-- Material UI search icon -->
             <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>

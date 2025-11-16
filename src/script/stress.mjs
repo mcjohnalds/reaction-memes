@@ -3,11 +3,12 @@ import fs from "node:fs";
 import assert from "node:assert";
 import timers from "node:timers";
 
+process.title = "reaction-memes-stress";
 const path = process.argv[2];
 const requestsPerSecond = process.argv[3];
 const millisecondsPerRequest = (1 / requestsPerSecond) * 1000;
-process.title = "reaction-memes-stress";
-const devNull = fs.createWriteStream("/dev/null");
+const devNullFile = await fs.promises.open("/dev/null", "a");
+const devNull = devNullFile.createWriteStream();
 devNull.setMaxListeners(0);
 let requests = 0;
 const times = [];
