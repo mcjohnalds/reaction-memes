@@ -1,0 +1,12 @@
+[Unit]
+After=network-online.target
+
+[Service]
+Type=exec
+Restart=always
+User=reaction-memes
+ExecStart=node src/script/server.mjs
+WorkingDirectory=/home/reaction-memes/reaction-memes
+
+[Install]
+WantedBy=multi-user.target
