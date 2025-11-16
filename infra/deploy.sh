@@ -3,7 +3,7 @@ ssh reaction-memes@5.78.119.234 bash -s <<'EOF'
 set -e
 cd ~/reaction-memes
 output=$(git pull)
-echo $output
+echo "$output"
 case "$output" in
   *"Updating"*)
     echo Restarting service.
