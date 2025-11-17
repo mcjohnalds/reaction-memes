@@ -67,16 +67,27 @@ suite("/", () => {
 
 suite("/search", () => {
   suite("GET", () => {
-    test("valid input", async () => {
-      const res = await request("/search?query=b");
+    test("valid input returns valid response", async () => {
+      const res = await request("/search?query=a");
       assert.equal(res.status, 200);
       assert.equal(res.headers.get("Content-Type"), "application/json");
       const json = await res.json();
       assert(Array.isArray(json));
+    });
+
+    test("returns most similar match", async () => {
+      const res = await request("/search?query=b");
+      const json = await res.json();
       assert.equal(json[0], "b.webp");
     });
 
-    test("large input", async () => {
+    test("handles similar images", async () => {
+      const res = await request("/search?query=c");
+      const json = await res.json();
+      assert.equal(json[0], "a.webp");
+    });
+
+    test("returns error on large query", async () => {
       const query = "a".repeat(200);
       const res = await request(`/search?query=${query}`);
       assert.equal(res.status, 400);
