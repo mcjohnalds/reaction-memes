@@ -11,8 +11,15 @@ const consoleLog = mock.fn();
 beforeEach(async () => {
   await fs.promises.mkdir("data-test/images", { recursive: true });
   await fs.promises.mkdir("data-test/thumbnails", { recursive: true });
+  const vectors = [await encodeText("foo"), await encodeText("bar")];
   const imageNames = ["a", "b", "c", "d", "e"];
-  const encodings = [];
+  const encodings = [
+    { file: "a.webp", vector: vectors[0] },
+    { file: "b.webp", vector: vectors[1] },
+    { file: "c.webp", vector: vectors[0] },
+    { file: "d.webp", vector: vectors[0] },
+    { file: "e.webp", vector: vectors[1] },
+  ];
   for (const image of imageNames) {
     await fs.promises.writeFile(`data-test/images/${image}.webp`, "");
     await fs.promises.writeFile(`data-test/thumbnails/${image}.webp`, "");
@@ -95,7 +102,10 @@ suite("/script.mjs", () => {
     // This test has nothing to do with /script.mjs specifically but it's a nice
     // place to put it
     test("logs the request", async () => {
-      await request("/script.mjs");
+      const res = await request("/script.mjs");
+      // Call text() so that the callback in request.on("end", fn) gets
+      // triggered. Without this, the test is flakey.
+      await res.text();
       assert.equal(consoleLog.mock.callCount(), 1);
       const args = consoleLog.mock.calls[0].arguments;
       const json = JSON.parse(args[0]);
