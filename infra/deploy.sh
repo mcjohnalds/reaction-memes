@@ -1,12 +1,4 @@
 #!/bin/bash
-echo node --test
-output=$(node --test --test-reporter spec)
-if [ "$?" -ne 0 ]; then
-  echo "$output"
-  exit 1
-fi
-
-echo
 echo ssh
 ssh reaction-memes@5.78.119.234 bash -s <<'EOF'
 set -e

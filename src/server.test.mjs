@@ -1,14 +1,14 @@
 import { createServer } from "./server.mjs";
 import fs from "node:fs";
-import { beforeEach, afterEach, test, after, before, suite } from "node:test";
+import { beforeEach, afterEach, test, suite, mock } from "node:test";
 import assert from "node:assert/strict";
 import { stressTest } from "./stress.mjs";
 import { encodeText } from "./clip.mjs";
 
 let server;
+const consoleLog = mock.fn();
 
 beforeEach(async () => {
-  console.log = () => {};
   await fs.promises.mkdir("data-test/images", { recursive: true });
   await fs.promises.mkdir("data-test/thumbnails", { recursive: true });
   const imageNames = ["a", "b", "c", "d", "e"];
@@ -31,11 +31,12 @@ beforeEach(async () => {
     JSON.stringify(encodings),
   );
   await fs.promises.writeFile("data-test/similar.json", JSON.stringify(groups));
-  server = await createServer("data-test");
+  server = await createServer("data-test", consoleLog);
   server.listen(8081);
 });
 
 afterEach(async () => {
+  consoleLog.mock.resetCalls();
   // Without closeAllConnections, server.close takes ages to resolve
   server.closeAllConnections();
   await new Promise((resolve) => server.close(resolve));
@@ -82,12 +83,29 @@ suite("/search", () => {
 });
 
 suite("/script.mjs", () => {
-  test("GET", async () => {
-    const res = await request("/script.mjs");
-    assert.equal(res.status, 200);
-    assert.equal(res.headers.get("Content-Type"), "text/javascript");
-    const text = await res.text();
-    assert(text.includes("function"));
+  suite("GET", () => {
+    test("returns the file", async () => {
+      const res = await request("/script.mjs");
+      assert.equal(res.status, 200);
+      assert.equal(res.headers.get("Content-Type"), "text/javascript");
+      const text = await res.text();
+      assert(text.includes("function"));
+    });
+
+    // This test has nothing to do with /script.mjs specifically but it's a nice
+    // place to put it
+    test("logs the request", async () => {
+      await request("/script.mjs");
+      assert.equal(consoleLog.mock.callCount(), 1);
+      const args = consoleLog.mock.calls[0].arguments;
+      const json = JSON.parse(args[0]);
+      assert.equal(json.status, 200);
+      assert.equal(json.method, "GET");
+      assert.equal(json.url, "/script.mjs");
+      assert(typeof json.duration === "number");
+      assert.equal(json.agent, "node");
+      assert.equal(new Date(json.time).toISOString(), json.time);
+    });
   });
 
   test("HEAD", async () => {
@@ -97,7 +115,7 @@ suite("/script.mjs", () => {
 });
 
 suite("/unsupported.txt", () => {
-  after(async () => {
+  afterEach(async () => {
     await fs.promises.rm("static/unsupported.txt", { force: true });
   });
 

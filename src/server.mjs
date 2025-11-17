@@ -16,16 +16,25 @@ const contentTypes = new Map([
   [".webmanifest", "application/manifest+json"],
 ]);
 
-export async function createServer(dataDirectory) {
+export async function createServer(
+  dataDirectory = "data",
+  consoleLog = console.log,
+) {
   const encodings = await getEncodings(dataDirectory);
   const server = http.createServer();
   server.on("request", (request, response) => {
-    handleRequest(request, response, dataDirectory, encodings);
+    handleRequest(request, response, dataDirectory, encodings, consoleLog);
   });
   return server;
 }
 
-async function handleRequest(request, response, dataDirectory, encodings) {
+async function handleRequest(
+  request,
+  response,
+  dataDirectory,
+  encodings,
+  consoleLog,
+) {
   try {
     let start = performance.now();
     const { status, headers, body, error } = await getReply(
@@ -35,7 +44,7 @@ async function handleRequest(request, response, dataDirectory, encodings) {
     );
     request.on("end", () => {
       const end = performance.now();
-      logRequest(request, status, end - start);
+      logRequest(request, status, end - start, consoleLog);
     });
     if (error) {
       console.error(error);
@@ -189,7 +198,7 @@ async function getEncodings(dataDirectory) {
   return filtered;
 }
 
-function logRequest(request, status, duration) {
+function logRequest(request, status, duration, consoleLog) {
   const log = {
     status,
     method: request.method,
@@ -199,7 +208,7 @@ function logRequest(request, status, duration) {
     duration: Math.round(duration),
     agent: request.headers["user-agent"],
     referer: request.headers["referer"],
-    date: new Date().toISOString(),
+    time: new Date().toISOString(),
   };
-  console.log(JSON.stringify(log));
+  consoleLog(JSON.stringify(log));
 }
