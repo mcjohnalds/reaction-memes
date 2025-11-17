@@ -15,16 +15,24 @@ const contentTypes = new Map([
   [".mjs", "text/javascript"],
   [".webmanifest", "application/manifest+json"],
 ]);
-const encodings = await getEncodings();
 
-export function createServer() {
-  return http.createServer(handleRequest);
+export async function createServer(dataDirectory) {
+  const encodings = await getEncodings(dataDirectory);
+  const server = http.createServer();
+  server.on("request", (request, response) => {
+    handleRequest(request, response, dataDirectory, encodings);
+  });
+  return server;
 }
 
-async function handleRequest(request, response) {
+async function handleRequest(request, response, dataDirectory, encodings) {
   try {
     let start = performance.now();
-    const { status, headers, body, error } = await getReply(request);
+    const { status, headers, body, error } = await getReply(
+      request,
+      dataDirectory,
+      encodings,
+    );
     request.on("end", () => {
       const end = performance.now();
       logRequest(request, status, end - start);
@@ -43,24 +51,24 @@ async function handleRequest(request, response) {
   }
 }
 
-async function getReply(request) {
+async function getReply(request, dataDirectory, encodings) {
   try {
     if (request.method !== "GET" && request.method !== "HEAD") {
       return { status: 404 };
     }
     const url = new URL(`https://example.com${request.url}`);
     if (url.pathname === "/") {
-      return getIndexPageReply();
+      return getIndexPageReply(encodings);
     } else if (url.pathname === "/search") {
-      return await getSearchPageReply(url);
+      return await getSearchPageReply(url, encodings);
     }
-    return await getStaticFileReply(url);
+    return await getStaticFileReply(url, dataDirectory);
   } catch (error) {
     return { status: 500, error };
   }
 }
 
-async function getStaticFileReply(url) {
+async function getStaticFileReply(url, dataDirectory) {
   let cacheControl;
   if (url.pathname.includes("..")) {
     // This is probably redundant but worth it just in case there is a bug in
@@ -73,7 +81,7 @@ async function getStaticFileReply(url) {
     url.pathname.startsWith("/thumbnails")
   ) {
     cacheControl = "public, max-age=31536000, immutable";
-    file = path.join("data", url.pathname);
+    file = path.join(dataDirectory, url.pathname);
   } else {
     file = path.join("static", url.pathname);
   }
@@ -98,7 +106,7 @@ async function getStaticFileReply(url) {
   };
 }
 
-function getIndexPageReply() {
+function getIndexPageReply(encodings) {
   const files = encodings.map((encoding) => encoding.file).slice(0, maxResults);
   const body = Readable.from([renderIndex(files)]);
   return {
@@ -108,7 +116,7 @@ function getIndexPageReply() {
   };
 }
 
-async function getSearchPageReply(url) {
+async function getSearchPageReply(url, encodings) {
   const query = url.searchParams.get("query");
   if (query.length > 100) {
     return {
@@ -159,14 +167,16 @@ function renderIndex(files) {
   `;
 }
 
-async function getEncodings() {
-  const encodingsFile = await fs.promises.readFile("data/encodings.json", {
-    encoding: "utf8",
-  });
+async function getEncodings(dataDirectory) {
+  const encodingsFile = await fs.promises.readFile(
+    `${dataDirectory}/encodings.json`,
+    { encoding: "utf8" },
+  );
   const encodings = JSON.parse(encodingsFile);
-  const similarFile = await fs.promises.readFile("data/similar.json", {
-    encoding: "utf8",
-  });
+  const similarFile = await fs.promises.readFile(
+    `${dataDirectory}/similar.json`,
+    { encoding: "utf8" },
+  );
   const groups = JSON.parse(similarFile);
   const ignore = new Set();
   for (const group of groups) {

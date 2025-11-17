@@ -1,21 +1,45 @@
 import { createServer } from "./server.mjs";
 import fs from "node:fs";
-import { test, after, before, suite } from "node:test";
+import { beforeEach, afterEach, test, after, before, suite } from "node:test";
 import assert from "node:assert/strict";
 import { stressTest } from "./stress.mjs";
+import { encodeText } from "./clip.mjs";
 
 let server;
 
-before(async () => {
+beforeEach(async () => {
   console.log = () => {};
-  server = createServer().listen(8081);
+  await fs.promises.mkdir("data-test/images", { recursive: true });
+  await fs.promises.mkdir("data-test/thumbnails", { recursive: true });
+  const imageNames = ["a", "b", "c", "d", "e"];
+  const encodings = [];
+  for (const image of imageNames) {
+    await fs.promises.writeFile(`data-test/images/${image}.webp`, "");
+    await fs.promises.writeFile(`data-test/thumbnails/${image}.webp`, "");
+    const encoding = {
+      file: image + ".webp",
+      vector: await encodeText(image),
+    };
+    encodings.push(encoding);
+  }
+  const groups = [
+    ["a.webp", "c.webp", "d.webp"],
+    ["b.webp", "e.webp"],
+  ];
+  await fs.promises.writeFile(
+    "data-test/encodings.json",
+    JSON.stringify(encodings),
+  );
+  await fs.promises.writeFile("data-test/similar.json", JSON.stringify(groups));
+  server = await createServer("data-test");
+  server.listen(8081);
 });
 
-after(async () => {
+afterEach(async () => {
   // Without closeAllConnections, server.close takes ages to resolve
   server.closeAllConnections();
   await new Promise((resolve) => server.close(resolve));
-  await fs.promises.rm("static/unsupported.txt", { force: true });
+  await fs.promises.rm("data-test", { recursive: true, force: true });
 });
 
 suite("/", () => {
@@ -36,12 +60,12 @@ suite("/", () => {
 suite("/search", () => {
   suite("GET", () => {
     test("valid input", async () => {
-      const res = await request("/search?query=foo%20bar");
+      const res = await request("/search?query=b");
       assert.equal(res.status, 200);
       assert.equal(res.headers.get("Content-Type"), "application/json");
       const json = await res.json();
       assert(Array.isArray(json));
-      await fs.promises.access(`data/images/${json[0]}`);
+      assert.equal(json[0], "b.webp");
     });
 
     test("large input", async () => {
@@ -52,7 +76,7 @@ suite("/search", () => {
   });
 
   test("HEAD", async () => {
-    const res = await request("/search?query=foo%20bar", { method: "HEAD" });
+    const res = await request("/search?query=a", { method: "HEAD" });
     assert.equal(res.status, 200);
   });
 });
@@ -73,6 +97,10 @@ suite("/script.mjs", () => {
 });
 
 suite("/unsupported.txt", () => {
+  after(async () => {
+    await fs.promises.rm("static/unsupported.txt", { force: true });
+  });
+
   test("GET", async () => {
     await fs.promises.writeFile("static/unsupported.txt", "hello");
     const res = await request("/unsupported.txt");
