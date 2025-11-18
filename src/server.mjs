@@ -187,13 +187,21 @@ async function getEncodings(dataDirectory) {
     { encoding: "utf8" },
   );
   const groups = JSON.parse(similarFile);
-  const ignore = new Set();
+  const tooSimilar = new Set();
   for (const group of groups) {
     for (const image of group.slice(1)) {
-      ignore.add(image);
+      tooSimilar.add(image);
     }
   }
-  const filtered = encodings.filter((encoding) => !ignore.has(encoding.file));
+  const ignoreFile = await fs.promises.readFile(
+    `${dataDirectory}/ignore.json`,
+    { encoding: "utf8" },
+  );
+  const ignore = JSON.parse(ignoreFile);
+  const filtered = encodings.filter(
+    (encoding) =>
+      !tooSimilar.has(encoding.file) && !ignore.includes(encoding.file),
+  );
   assert(encodings.length > filtered.length);
   return filtered;
 }

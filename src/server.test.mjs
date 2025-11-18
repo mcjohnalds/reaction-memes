@@ -11,7 +11,7 @@ const consoleLog = mock.fn();
 beforeEach(async () => {
   await fs.promises.mkdir("data-test/images", { recursive: true });
   await fs.promises.mkdir("data-test/thumbnails", { recursive: true });
-  const vectors = [await encodeText("foo"), await encodeText("bar")];
+  const vectors = await Promise.all(["foo", "bar", "baz"].map(encodeText));
   const imageNames = ["a", "b", "c", "d", "e"];
   const encodings = [
     { file: "a.webp", vector: vectors[0] },
@@ -19,6 +19,7 @@ beforeEach(async () => {
     { file: "c.webp", vector: vectors[0] },
     { file: "d.webp", vector: vectors[0] },
     { file: "e.webp", vector: vectors[1] },
+    { file: "f.webp", vector: vectors[2] },
   ];
   for (const image of imageNames) {
     await fs.promises.writeFile(`data-test/images/${image}.webp`, "");
@@ -37,6 +38,8 @@ beforeEach(async () => {
     "data-test/encodings.json",
     JSON.stringify(encodings),
   );
+  const ignore = ["f.webp"];
+  await fs.promises.writeFile("data-test/ignore.json", JSON.stringify(ignore));
   await fs.promises.writeFile("data-test/similar.json", JSON.stringify(groups));
   server = await createServer("data-test", consoleLog);
   server.listen(8081);
@@ -81,10 +84,16 @@ suite("/search", () => {
       assert.equal(json[0], "b.webp");
     });
 
-    test("handles similar images", async () => {
+    test("excludes images which are too similar", async () => {
       const res = await request("/search?query=c");
       const json = await res.json();
-      assert.equal(json[0], "a.webp");
+      assert(!json.includes("c.webp"));
+    });
+
+    test("excludes images which are in the ignore file", async () => {
+      const res = await request("/search?query=baz");
+      const json = await res.json();
+      assert(!json.includes("f.webp"));
     });
 
     test("returns error on large query", async () => {
