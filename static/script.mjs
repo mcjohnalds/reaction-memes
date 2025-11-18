@@ -17,8 +17,6 @@ class AppElement extends HTMLElement {
       }
       this.#searchTimeoutId = setTimeout(() => this.#search(), 400);
     });
-    // TODO: do i need this
-    customElements.upgrade(this.#mosaic);
     this.#mosaic.loadImages(window.initialImages);
   }
 
@@ -69,6 +67,7 @@ class MosaicElement extends HTMLElement {
   #images = [];
   #page = 0;
   #resizeTimeoutId = null;
+  #clientWidthPrevious;
 
   get loading() {
     return this.#loading;
@@ -83,6 +82,12 @@ class MosaicElement extends HTMLElement {
   }
 
   async #handleResize() {
+    if (this.clientWidth === this.#clientWidthPrevious) {
+      // Safari on iOS seems to emit resize events even when nothing changes.
+      // Without this return, scrolling is glitchy.
+      return;
+    }
+    this.#clientWidthPrevious = this.clientWidth;
     if (this.#resizeTimeoutId !== null) {
       clearTimeout(this.#resizeTimeoutId);
     }
