@@ -83,7 +83,7 @@ class MosaicElement extends HTMLElement {
   loadImages(value) {
     this.#page = 0;
     this.#images = value;
-    const columnCount = Math.floor(this.clientWidth / 200);
+    const columnCount = Math.max(Math.floor(this.clientWidth / 150), 2);
     this.innerHTML = "<div></div>".repeat(columnCount);
     this.#loadPage();
   }
