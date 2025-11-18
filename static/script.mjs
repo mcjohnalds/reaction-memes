@@ -51,6 +51,14 @@ class SearchInput extends HTMLElement {
     this.#input.addEventListener("input", () => {
       this.dispatchEvent(new Event("input"));
     });
+    // When switching to a tab, Safari scrolls to the focused input. So if the
+    // user scrolls halfway down the page, then they go to a different tab, then
+    // they come back, they will be at the top of the page. Not good.
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
+        this.#input.blur();
+      }
+    });
   }
 }
 
@@ -68,16 +76,20 @@ class MosaicElement extends HTMLElement {
 
   connectedCallback() {
     window.addEventListener("resize", () => {
-      if (this.#resizeTimeoutId !== null) {
-        clearTimeout(this.#resizeTimeoutId);
-      }
-      this.#resizeTimeoutId = setTimeout(
-        () => this.loadImages(this.#images),
-        100,
-      );
+      this.#handleResize();
     });
     this.#loadPage();
     this.#startInfiniteScrollLoop();
+  }
+
+  async #handleResize() {
+    if (this.#resizeTimeoutId !== null) {
+      clearTimeout(this.#resizeTimeoutId);
+    }
+    this.#resizeTimeoutId = setTimeout(
+      () => this.loadImages(this.#images),
+      100,
+    );
   }
 
   loadImages(value) {
