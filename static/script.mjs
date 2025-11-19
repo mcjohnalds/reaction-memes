@@ -21,11 +21,11 @@ class SearchForm extends HTMLElement {
 }
 
 class MosaicElement extends HTMLElement {
-  static #pageSize = 50;
   #loading = false;
   #counter = 0;
+  // TODO: remove this variable
   #images = [];
-  #page = 0;
+  #imagesAdded = 0;
   #resizeTimeoutId = null;
   #clientWidthPrevious;
 
@@ -59,10 +59,12 @@ class MosaicElement extends HTMLElement {
     );
   }
 
+  // TODO: simplify this function
   #loadImages(value) {
-    this.#page = 0;
+    this.#imagesAdded = 0;
     this.#images = value;
-    const columnCount = Math.max(Math.floor(this.clientWidth / 150), 2);
+    const columnWidth = 150;
+    const columnCount = Math.max(Math.floor(this.clientWidth / columnWidth), 2);
     this.innerHTML = "<div></div>".repeat(columnCount);
     this.#loadPage();
   }
@@ -72,16 +74,21 @@ class MosaicElement extends HTMLElement {
     this.#loading = true;
     this.#counter++;
     const counter = this.#counter;
-    const start = this.#page * MosaicElement.#pageSize;
-    const end = Math.min(
-      (this.#page + 1) * MosaicElement.#pageSize,
-      this.#images.length,
-    );
-    const columnCount = this.children.length;
-    for (let i = start; i < end; i++) {
+    while (true) {
+      const { scrollHeight, clientHeight, scrollTop } =
+        document.documentElement;
+      if (scrollHeight > scrollTop + 2 * clientHeight) {
+        break;
+      }
+      if (this.#imagesAdded === this.#images.length) {
+        break;
+      }
+      const i = this.#imagesAdded;
+      const columnCount = this.children.length;
       const columnIndex = i % columnCount;
       const item = this.#createItem(this.#images[i]);
       this.children[columnIndex].appendChild(item);
+      this.#imagesAdded++;
       // Let thread breathe
       await new Promise((r) => setTimeout(r, 0));
       if (this.#counter !== counter) {
@@ -109,12 +116,6 @@ class MosaicElement extends HTMLElement {
       if (this.#loading) {
         continue;
       }
-      const { scrollTop, scrollHeight, clientHeight } =
-        document.documentElement;
-      if (scrollTop + clientHeight < scrollHeight * 0.8) {
-        continue;
-      }
-      this.#page++;
       this.#loadPage();
     }
   }
