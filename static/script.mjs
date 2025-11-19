@@ -24,21 +24,16 @@ class MosaicElement extends HTMLElement {
   #loading = false;
   #counter = 0;
   // TODO: remove this variable
-  #images = [];
   #imagesAdded = 0;
   #resizeTimeoutId = null;
   #clientWidthPrevious;
-
-  get loading() {
-    return this.#loading;
-  }
 
   connectedCallback() {
     window.addEventListener("resize", () => {
       this.#handleResize();
     });
     this.#startInfiniteScrollLoop();
-    this.#loadImages(window.images);
+    this.#loadImages();
   }
 
   async #handleResize() {
@@ -53,16 +48,12 @@ class MosaicElement extends HTMLElement {
     if (this.#resizeTimeoutId !== null) {
       clearTimeout(this.#resizeTimeoutId);
     }
-    this.#resizeTimeoutId = setTimeout(
-      () => this.#loadImages(this.#images),
-      100,
-    );
+    this.#resizeTimeoutId = setTimeout(() => this.#loadImages(), 100);
   }
 
   // TODO: simplify this function
-  #loadImages(value) {
+  #loadImages() {
     this.#imagesAdded = 0;
-    this.#images = value;
     const columnWidth = 150;
     const columnCount = Math.max(Math.floor(this.clientWidth / columnWidth), 2);
     this.innerHTML = "<div></div>".repeat(columnCount);
@@ -80,13 +71,13 @@ class MosaicElement extends HTMLElement {
       if (scrollHeight > scrollTop + 2 * clientHeight) {
         break;
       }
-      if (this.#imagesAdded === this.#images.length) {
+      if (this.#imagesAdded === window.images.length) {
         break;
       }
       const i = this.#imagesAdded;
       const columnCount = this.children.length;
       const columnIndex = i % columnCount;
-      const item = this.#createItem(this.#images[i]);
+      const item = this.#createItem(window.images[i]);
       this.children[columnIndex].appendChild(item);
       this.#imagesAdded++;
       // Let thread breathe
