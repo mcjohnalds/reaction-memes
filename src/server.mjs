@@ -116,13 +116,10 @@ async function getStaticFileReply(url, dataDirectory) {
 }
 
 function getIndexPageReply(encodings) {
-  const files = encodings.map((encoding) => encoding.file).slice(0, maxResults);
-  const body = Readable.from([renderIndex(files)]);
-  return {
-    status: 200,
-    headers: { "Content-Type": "text/html" },
-    body,
-  };
+  const images = encodings
+    .map((encoding) => encoding.file)
+    .slice(0, maxResults);
+  return getResultsPageReply(images);
 }
 
 async function getSearchPageReply(url, encodings) {
@@ -139,17 +136,12 @@ async function getSearchPageReply(url, encodings) {
     results.push({ file: encoding.file, similarity });
   }
   results.sort((a, b) => b.similarity - a.similarity);
-  const files = results.slice(0, maxResults).map((result) => result.file);
-  const json = JSON.stringify(files);
-  return {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-    body: Readable.from([json]),
-  };
+  const images = results.slice(0, maxResults).map((result) => result.file);
+  return getResultsPageReply(images);
 }
 
-function renderIndex(files) {
-  return `
+function getResultsPageReply(images) {
+  const html = `
     <!DOCTYPE html>
     <html>
       <head>
@@ -157,23 +149,40 @@ function renderIndex(files) {
         <link rel="stylesheet" href="/style.css" type="text/css" />
       </head>
       <body>
-        <x-app>
-          <object class="title" data="/title.svg" type="image/svg+xml"></object>
-          <div class="subtitle">Type anything to find the perfect meme</div>
-          <x-search-input>
-            <!-- Material UI search icon -->
-            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
-            <input autofocus maxlength="100" type="search" />
-          </x-search-input>
-          <x-mosaic></x-mosaic>
-        </x-app>
+        <a href="/" class="title" >
+          <img src="/title.svg" />
+        </a>
+        <div class="subtitle">Find the perfect meme</div>
+        <x-search-form>
+          <form method="get" action="/search">
+            <div>
+              <!-- Material UI search icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
+              <input
+                name="query"
+                autofocus
+                maxlength="100"
+                type="search"
+                required
+              />
+            </div>
+            <button type="submit" tabindex="0">Search</button>
+          </form>
+        </x-search-form>
+        <x-mosaic></x-mosaic>
         <script>
-          window.initialImages = ${JSON.stringify(files)};
+          window.images = ${JSON.stringify(images)};
         </script>
         <script src="/script.mjs" type="module"></script>
       </body>
     </html>
   `;
+  const body = Readable.from([html]);
+  return {
+    status: 200,
+    headers: { "Content-Type": "text/html" },
+    body,
+  };
 }
 
 async function getEncodings(dataDirectory) {

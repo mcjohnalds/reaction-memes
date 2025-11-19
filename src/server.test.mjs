@@ -1,6 +1,14 @@
 import { createServer } from "./server.mjs";
 import fs from "node:fs";
-import { beforeEach, afterEach, test, suite, mock } from "node:test";
+import {
+  before,
+  beforeEach,
+  after,
+  afterEach,
+  test,
+  suite,
+  mock,
+} from "node:test";
 import assert from "node:assert/strict";
 import { stressTest } from "./stress.mjs";
 import { encodeText } from "./clip.mjs";
@@ -8,27 +16,21 @@ import { encodeText } from "./clip.mjs";
 let server;
 const consoleLog = mock.fn();
 
-beforeEach(async () => {
+before(async () => {
+  await fs.promises.rm("data-test", { recursive: true, force: true });
   await fs.promises.mkdir("data-test/images", { recursive: true });
   await fs.promises.mkdir("data-test/thumbnails", { recursive: true });
-  const vectors = await Promise.all(["foo", "bar", "baz"].map(encodeText));
-  const imageNames = ["a", "b", "c", "d", "e"];
   const encodings = [
-    { file: "a.webp", vector: vectors[0] },
-    { file: "b.webp", vector: vectors[1] },
-    { file: "c.webp", vector: vectors[0] },
-    { file: "d.webp", vector: vectors[0] },
-    { file: "e.webp", vector: vectors[1] },
-    { file: "f.webp", vector: vectors[2] },
+    { file: "a.webp", vector: await encodeText("foo") },
+    { file: "b.webp", vector: await encodeText("bar") },
+    { file: "c.webp", vector: await encodeText("foo") },
+    { file: "d.webp", vector: await encodeText("foo") },
+    { file: "e.webp", vector: await encodeText("bar") },
+    { file: "f.webp", vector: await encodeText("baz") },
   ];
-  for (const image of imageNames) {
-    await fs.promises.writeFile(`data-test/images/${image}.webp`, "");
-    await fs.promises.writeFile(`data-test/thumbnails/${image}.webp`, "");
-    const encoding = {
-      file: image + ".webp",
-      vector: await encodeText(image),
-    };
-    encodings.push(encoding);
+  for (const encoding of encodings) {
+    await fs.promises.writeFile(`data-test/images/${encoding.file}`, "");
+    await fs.promises.writeFile(`data-test/thumbnails//${encoding.file}`, "");
   }
   const groups = [
     ["a.webp", "c.webp", "d.webp"],
@@ -45,12 +47,15 @@ beforeEach(async () => {
   server.listen(8081);
 });
 
-afterEach(async () => {
-  consoleLog.mock.resetCalls();
+after(async () => {
   // Without closeAllConnections, server.close takes ages to resolve
   server.closeAllConnections();
   await new Promise((resolve) => server.close(resolve));
   await fs.promises.rm("data-test", { recursive: true, force: true });
+});
+
+afterEach(async () => {
+  consoleLog.mock.resetCalls();
 });
 
 suite("/", () => {
@@ -60,6 +65,9 @@ suite("/", () => {
     assert.equal(res.headers.get("Content-Type"), "text/html");
     const text = await res.text();
     assert(text.includes("<html>"));
+    const images = getImages(text);
+    images.sort();
+    assert.equal(String(images), String(["a.webp", "b.webp"]));
   });
 
   test("HEAD", async () => {
@@ -71,29 +79,34 @@ suite("/", () => {
 suite("/search", () => {
   suite("GET", () => {
     test("valid input returns valid response", async () => {
-      const res = await request("/search?query=a");
+      const res = await request("/search?query=foo");
       assert.equal(res.status, 200);
-      assert.equal(res.headers.get("Content-Type"), "application/json");
-      const json = await res.json();
-      assert(Array.isArray(json));
+      assert.equal(res.headers.get("Content-Type"), "text/html");
+      const text = await res.text();
+      assert(text.includes("<html>"));
+      const images = getImages(text);
+      images.sort();
+      // Excludes c.webp, d.webp which are too similar to a.webp
+      //
+      // Excludes e.webp which is too similar to b.webp
+      //
+      // Excludes f.webp which is in the ignore file
+      assert.equal(String(images), String(["a.webp", "b.webp"]));
     });
 
-    test("returns most similar match", async () => {
-      const res = await request("/search?query=b");
-      const json = await res.json();
-      assert.equal(json[0], "b.webp");
-    });
-
-    test("excludes images which are too similar", async () => {
-      const res = await request("/search?query=c");
-      const json = await res.json();
-      assert(!json.includes("c.webp"));
-    });
-
-    test("excludes images which are in the ignore file", async () => {
-      const res = await request("/search?query=baz");
-      const json = await res.json();
-      assert(!json.includes("f.webp"));
+    suite("returns most similar match first", () => {
+      const tests = [
+        { query: "foo", expectedImages: ["a.webp", "b.webp"] },
+        { query: "bar", expectedImages: ["b.webp", "a.webp"] },
+      ];
+      for (const [i, { query, expectedImages }] of tests.entries()) {
+        test(`case ${i + 1}`, async () => {
+          const res = await request(`/search?query=${query}`);
+          const text = await res.text();
+          const images = getImages(text);
+          assert.equal(String(images), String([expectedImages]));
+        });
+      }
     });
 
     test("returns error on large query", async () => {
@@ -199,4 +212,16 @@ test("stress test", async () => {
 
 async function request(path, options) {
   return await fetch(`http://localhost:8081${path}`, options);
+}
+
+function getImages(html) {
+  const start = "window.images = ";
+  const end = ";";
+  const line = html.split("\n").find((l) => l.includes(start));
+  const i = line.indexOf(start) + start.length;
+  const j = line.indexOf(end);
+  const str = line.substring(i, j);
+  const images = JSON.parse(str);
+  assert(Array.isArray(images));
+  return images;
 }

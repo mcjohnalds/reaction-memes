@@ -14,8 +14,43 @@ html {
 }
 
 body {
-  margin: 0;
+  display: flex;
+  flex-direction: column;
   padding: 0;
+  gap: 16px;
+  margin: 8px;
+
+  @media only screen and (min-width: 700px) {
+    margin: 16px;
+  }
+
+  .title {
+    align-self: start;
+    display: flex;
+
+    img {
+      /* Negative margin removes padding from the image */
+      margin: 0 -1%;
+      max-width: 100%;
+      /* Disable the feature in Safari where the user can select OCR'd text in
+       * images */
+      user-select: none;
+      -webkit-user-select: none;
+    }
+  }
+
+  .subtitle {
+    margin: 0;
+    font-weight: 200;
+    align-self: start;
+    font-size: 20px;
+    letter-spacing: 0.1px;
+
+    @media only screen and (min-width: 700px) {
+      font-size: 24px;
+      letter-spacing: 0.2px;
+    }
+  }
 }
 
 *::selection {
@@ -23,64 +58,68 @@ body {
   color: var(--background);
 }
 
-x-app {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin: 8px;
+x-search-form {
+  form {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
 
-  @media only screen and (min-width: 700px) {
-    margin: 16px;
-    gap: 32px;
-  }
+    div {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      border: 2px solid var(--foreground);
+      background: var(--background);
+      gap: 8px;
+      padding: 0 8px;
+      align-items: center;
 
-  .title {
-    height: 48px;
-    align-self: start;
-    max-width: 100%;
-  }
+      &:focus-within {
+        outline: 1px solid var(--tertiary);
+        outline-offset: 0;
+      }
 
-  .subtitle {
-    margin: -8px 0;
-    font-weight: normal;
-    font-size: 24px;
-    font-variant: small-caps;
-    align-self: start;
-    letter-spacing: 0.2px;
-  }
-}
+      input {
+        font-family: sans-serif;
+        padding: 8px 0;
+        flex: 1;
+        border-radius: 0;
+        background: none;
+        border: none;
+        font-size: 16px;
+        color: var(--foreground);
+      }
 
-x-search-input {
-  display: flex;
-  flex-direction: row;
-  border: 2px solid var(--foreground);
-  background: var(--background);
-  gap: 8px;
-  padding: 0 8px;
-  align-items: center;
+      input:focus {
+        outline: none;
+      }
 
-  &:focus-within {
-    outline: 1px solid var(--tertiary);
-    outline-offset: 0;
-  }
+      svg {
+        color: var(--placeholder);
+      }
+    }
 
-  input {
-    font-family: sans-serif;
-    padding: 8px 0;
-    flex: 1;
-    border-radius: 0;
-    background: none;
-    border: none;
-    font-size: 16px;
-    color: var(--foreground);
-  }
+    button {
+      text-transform: uppercase;
+      border-radius: 0;
+      border: 2px solid var(--foreground);
+      background: var(--background);
+      color: var(--foreground);
+      font-size: 16px;
+      padding: 8px;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+    }
 
-  input:focus {
-    outline: none;
-  }
+    button:focus {
+      outline: 1px solid var(--tertiary);
+      outline-offset: 0;
+    }
 
-  svg {
-    color: var(--placeholder);
+    button:active {
+      background-color: var(--foreground);
+    }
   }
 }
 

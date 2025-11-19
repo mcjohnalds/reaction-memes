@@ -1,58 +1,13 @@
-class AppElement extends HTMLElement {
-  #searchCounter = 0;
-  #searchTimeoutId = null;
-
-  get #input() {
-    return this.querySelector("& > x-search-input");
-  }
-
-  get #mosaic() {
-    return this.querySelector("& > x-mosaic");
-  }
-
-  connectedCallback() {
-    this.#input.addEventListener("input", () => {
-      if (this.#searchTimeoutId !== null) {
-        clearTimeout(this.#searchTimeoutId);
-      }
-      this.#searchTimeoutId = setTimeout(() => this.#search(), 400);
-    });
-    this.#mosaic.loadImages(window.initialImages);
-  }
-
-  async #search() {
-    this.#searchCounter++;
-    const counter = this.#searchCounter;
-    const params = new URLSearchParams({ query: this.#input.value });
-    const res = await fetch(`/search?${params}`);
-    const images = await res.json();
-    if (this.#searchCounter !== counter) {
-      return;
-    }
-    this.#mosaic.loadImages(images);
-  }
-}
-
-class SearchInput extends HTMLElement {
-  get value() {
-    return this.#input.value;
-  }
-
+class SearchForm extends HTMLElement {
   get #input() {
     return this.querySelector("input");
   }
 
   connectedCallback() {
+    // Need this event handler so the user can click on the magnifying glass
+    // icon
     this.addEventListener("click", () => {
       this.#input.focus();
-    });
-    this.#input.addEventListener("input", () => {
-      this.dispatchEvent(new Event("input"));
-    });
-    this.#input.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") {
-        this.#input.blur();
-      }
     });
     // When switching to a tab, Safari scrolls to the focused input. So if the
     // user scrolls halfway down the page, then they go to a different tab, then
@@ -82,8 +37,8 @@ class MosaicElement extends HTMLElement {
     window.addEventListener("resize", () => {
       this.#handleResize();
     });
-    this.#loadPage();
     this.#startInfiniteScrollLoop();
+    this.#loadImages(window.images);
   }
 
   async #handleResize() {
@@ -99,12 +54,12 @@ class MosaicElement extends HTMLElement {
       clearTimeout(this.#resizeTimeoutId);
     }
     this.#resizeTimeoutId = setTimeout(
-      () => this.loadImages(this.#images),
+      () => this.#loadImages(this.#images),
       100,
     );
   }
 
-  loadImages(value) {
+  #loadImages(value) {
     this.#page = 0;
     this.#images = value;
     const columnCount = Math.max(Math.floor(this.clientWidth / 150), 2);
@@ -169,6 +124,5 @@ async function wait(ms) {
   await new Promise((r) => setTimeout(r, ms));
 }
 
-customElements.define("x-search-input", SearchInput);
+customElements.define("x-search-form", SearchForm);
 customElements.define("x-mosaic", MosaicElement);
-customElements.define("x-app", AppElement);
