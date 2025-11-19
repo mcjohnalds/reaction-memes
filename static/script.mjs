@@ -49,6 +49,11 @@ class SearchInput extends HTMLElement {
     this.#input.addEventListener("input", () => {
       this.dispatchEvent(new Event("input"));
     });
+    this.#input.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        this.#input.blur();
+      }
+    });
     // When switching to a tab, Safari scrolls to the focused input. So if the
     // user scrolls halfway down the page, then they go to a different tab, then
     // they come back, they will be at the top of the page. Not good.
@@ -85,6 +90,8 @@ class MosaicElement extends HTMLElement {
     if (this.clientWidth === this.#clientWidthPrevious) {
       // Safari on iOS seems to emit resize events even when nothing changes.
       // Without this return, scrolling is glitchy.
+      //
+      // This happens only on physical iOS devices, not the simulator.
       return;
     }
     this.#clientWidthPrevious = this.clientWidth;
