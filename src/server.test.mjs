@@ -1,14 +1,6 @@
-import { createServer } from "./server.mjs";
+import { createServer, escapeHTML } from "./server.mjs";
 import fs from "node:fs";
-import {
-  before,
-  beforeEach,
-  after,
-  afterEach,
-  test,
-  suite,
-  mock,
-} from "node:test";
+import { before, after, afterEach, test, suite, mock } from "node:test";
 import assert from "node:assert/strict";
 import { stressTest } from "./stress.mjs";
 import { encodeText } from "./clip.mjs";
@@ -65,6 +57,7 @@ suite("/", () => {
     assert.equal(res.headers.get("Content-Type"), "text/html");
     const text = await res.text();
     assert(text.includes("<html>"));
+    assert(text.includes('value=""'));
     const images = getImages(text);
     images.sort();
     assert.equal(String(images), String(["a.webp", "b.webp"]));
@@ -84,6 +77,7 @@ suite("/search", () => {
       assert.equal(res.headers.get("Content-Type"), "text/html");
       const text = await res.text();
       assert(text.includes("<html>"));
+      assert(text.includes('value="foo"'));
       const images = getImages(text);
       images.sort();
       // Excludes c.webp, d.webp which are too similar to a.webp
@@ -227,6 +221,12 @@ test("logs requests", async () => {
   assert(typeof json.duration === "number");
   assert.equal(json.agent, "node");
   assert.equal(new Date(json.time).toISOString(), json.time);
+});
+
+test("escapeHTML()", () => {
+  const str = `amp=& qout=" apos=' lt=< gt=>`;
+  const expected = "amp=&amp; qout=&quot; apos=&apos; lt=&lt; gt=&gt;";
+  assert.equal(escapeHTML(str), expected);
 });
 
 test("stress test", async () => {

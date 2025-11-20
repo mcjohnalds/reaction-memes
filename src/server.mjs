@@ -122,7 +122,7 @@ function getIndexPageReply(encodings) {
   const images = encodings
     .map((encoding) => encoding.file)
     .slice(0, maxResults);
-  return getResultsPageReply(images);
+  return getResultsPageReply(images, "");
 }
 
 async function getSearchPageReply(url, encodings) {
@@ -140,10 +140,10 @@ async function getSearchPageReply(url, encodings) {
   }
   results.sort((a, b) => b.similarity - a.similarity);
   const images = results.slice(0, maxResults).map((result) => result.file);
-  return getResultsPageReply(images);
+  return getResultsPageReply(images, query);
 }
 
-function getResultsPageReply(images) {
+function getResultsPageReply(images, query) {
   const html = `
     <!DOCTYPE html>
     <html>
@@ -167,6 +167,7 @@ function getResultsPageReply(images) {
                 autofocus
                 maxlength="100"
                 type="search"
+                value="${escapeHTML(query)}"
                 required
               />
             </div>
@@ -232,4 +233,15 @@ function logRequest(request, status, duration, consoleLog) {
     time: new Date().toISOString(),
   };
   consoleLog(JSON.stringify(log));
+}
+
+export function escapeHTML(s) {
+  const lookup = {
+    "&": "&amp;",
+    '"': "&quot;",
+    "'": "&apos;",
+    "<": "&lt;",
+    ">": "&gt;",
+  };
+  return s.replace(/[&"'<>]/g, (c) => lookup[c]);
 }
