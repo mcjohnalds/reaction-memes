@@ -21,9 +21,6 @@ class SearchForm extends HTMLElement {
 }
 
 class MosaicElement extends HTMLElement {
-  #loading = false;
-  #counter = 0;
-  // TODO: remove this variable
   #imagesAdded = 0;
   #resizeTimeoutId = null;
   #clientWidthPrevious;
@@ -32,8 +29,8 @@ class MosaicElement extends HTMLElement {
     window.addEventListener("resize", () => {
       this.#handleResize();
     });
-    this.#startInfiniteScrollLoop();
     this.#loadImages();
+    this.#startInfiniteScrollLoop();
   }
 
   async #handleResize() {
@@ -51,42 +48,35 @@ class MosaicElement extends HTMLElement {
     this.#resizeTimeoutId = setTimeout(() => this.#loadImages(), 100);
   }
 
-  // TODO: simplify this function
   #loadImages() {
     this.#imagesAdded = 0;
     const columnWidth = 150;
     const columnCount = Math.max(Math.floor(this.clientWidth / columnWidth), 2);
     this.innerHTML = "<div></div>".repeat(columnCount);
-    this.#loadPage();
   }
 
-  // Not pretty but optimized for good FPS. Do not change without profiling.
-  async #loadPage() {
-    this.#loading = true;
-    this.#counter++;
-    const counter = this.#counter;
+  async #startInfiniteScrollLoop() {
+    // Not pretty but optimized for good FPS. Do not change without profiling.
     while (true) {
       const { scrollHeight, clientHeight, scrollTop } =
         document.documentElement;
-      if (scrollHeight > scrollTop + 2 * clientHeight) {
-        break;
+      const enoughImages =
+        scrollHeight > scrollTop + 2 * clientHeight ||
+        this.#imagesAdded === window.images.length;
+      if (enoughImages) {
+        // using wait(100) instead of wait(0) saves CPU
+        await wait(100);
+        continue;
       }
-      if (this.#imagesAdded === window.images.length) {
-        break;
-      }
+      // Let the thread breath to stop long UI pauses
+      await wait(0);
       const i = this.#imagesAdded;
       const columnCount = this.children.length;
       const columnIndex = i % columnCount;
       const item = this.#createItem(window.images[i]);
       this.children[columnIndex].appendChild(item);
       this.#imagesAdded++;
-      // Let thread breathe
-      await new Promise((r) => setTimeout(r, 0));
-      if (this.#counter !== counter) {
-        return;
-      }
     }
-    this.#loading = false;
   }
 
   #createItem(image) {
@@ -99,16 +89,6 @@ class MosaicElement extends HTMLElement {
     img.src = `/thumbnails/${image}`;
     a.appendChild(img);
     return a;
-  }
-
-  async #startInfiniteScrollLoop() {
-    while (true) {
-      await wait(200);
-      if (this.#loading) {
-        continue;
-      }
-      this.#loadPage();
-    }
   }
 }
 
