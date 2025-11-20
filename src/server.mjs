@@ -78,7 +78,7 @@ async function getReply(request, dataDirectory, encodings) {
 }
 
 async function getStaticFileReply(url, dataDirectory) {
-  let cacheControl;
+  let cacheControl = "no-cache";
   if (url.pathname.includes("..")) {
     // This is probably redundant but worth it just in case there is a bug in
     // the logic
@@ -87,11 +87,14 @@ async function getStaticFileReply(url, dataDirectory) {
   let file;
   if (
     url.pathname.startsWith("/images/") ||
-    url.pathname.startsWith("/thumbnails")
+    url.pathname.startsWith("/thumbnails/")
   ) {
     cacheControl = "public, max-age=31536000, immutable";
     file = path.join(dataDirectory, url.pathname);
   } else {
+    if (url.pathname === "/title.svg") {
+      cacheControl = "public, max-age=31536000, immutable";
+    }
     file = path.join("static", url.pathname);
   }
   try {
@@ -109,7 +112,7 @@ async function getStaticFileReply(url, dataDirectory) {
     status: 200,
     headers: {
       "Content-Type": contentType,
-      ...(cacheControl ? { "Cache-Control": cacheControl } : undefined),
+      "Cache-Control": cacheControl,
     },
     body: stream,
   };

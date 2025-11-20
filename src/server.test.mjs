@@ -122,39 +122,52 @@ suite("/search", () => {
   });
 });
 
-suite("/script.mjs", () => {
-  suite("GET", () => {
-    test("returns the file", async () => {
-      const res = await request("/script.mjs");
-      assert.equal(res.status, 200);
-      assert.equal(res.headers.get("Content-Type"), "text/javascript");
-      const text = await res.text();
-      assert(text.includes("function"));
-    });
+suite("static files", () => {
+  const tests = [
+    {
+      path: "/script.mjs",
+      headers: {
+        "Content-Type": "text/javascript",
+        "Cache-Control": "no-cache",
+      },
+    },
+    {
+      path: "/style.css",
+      headers: {
+        "Content-Type": "text/css",
+        "Cache-Control": "no-cache",
+      },
+    },
+    {
+      path: "/title.svg",
+      headers: {
+        "Content-Type": "image/svg+xml",
+        "Cache-Control": "public, max-age=31536000, immutable",
+      },
+    },
+  ];
 
-    // This test has nothing to do with /script.mjs specifically but it's a nice
-    // place to put it
-    test("logs the request", async () => {
-      const res = await request("/script.mjs");
-      // Call text() so that the callback in request.on("end", fn) gets
-      // triggered. Without this, the test is flakey.
-      await res.text();
-      assert.equal(consoleLog.mock.callCount(), 1);
-      const args = consoleLog.mock.calls[0].arguments;
-      const json = JSON.parse(args[0]);
-      assert.equal(json.status, 200);
-      assert.equal(json.method, "GET");
-      assert.equal(json.url, "/script.mjs");
-      assert(typeof json.duration === "number");
-      assert.equal(json.agent, "node");
-      assert.equal(new Date(json.time).toISOString(), json.time);
-    });
-  });
+  for (const { path, headers } of tests) {
+    suite(path, () => {
+      test("GET", async () => {
+        const res = await request(path);
+        assert.equal(res.status, 200);
+        for (const [k, v] of Object.entries(headers)) {
+          assert.equal(res.headers.get(k), v);
+        }
+        const text = await res.text();
+        const file = await fs.promises.readFile(`static${path}`, {
+          encoding: "utf8",
+        });
+        assert.equal(text, file);
+      });
 
-  test("HEAD", async () => {
-    const res = await request("/script.mjs", { method: "HEAD" });
-    assert.equal(res.status, 200);
-  });
+      test("HEAD", async () => {
+        const res = await request(path, { method: "HEAD" });
+        assert.equal(res.status, 200);
+      });
+    });
+  }
 });
 
 suite("/unsupported.txt", () => {
@@ -198,6 +211,22 @@ suite("/does-not-exist.mjs", () => {
     const res = await request("/does-not-exist.mjs", { method: "HEAD" });
     assert.equal(res.status, 404);
   });
+});
+
+test("logs requests", async () => {
+  const res = await request("/script.mjs");
+  // Call text() so that the callback in request.on("end", fn) gets triggered.
+  // Without this, the test is flakey.
+  await res.text();
+  assert.equal(consoleLog.mock.callCount(), 1);
+  const args = consoleLog.mock.calls[0].arguments;
+  const json = JSON.parse(args[0]);
+  assert.equal(json.status, 200);
+  assert.equal(json.method, "GET");
+  assert.equal(json.url, "/script.mjs");
+  assert(typeof json.duration === "number");
+  assert.equal(json.agent, "node");
+  assert.equal(new Date(json.time).toISOString(), json.time);
 });
 
 test("stress test", async () => {
