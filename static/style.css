@@ -6,11 +6,18 @@ html {
   --foreground: #eee;
   --placeholder: #aaa;
   margin: 0;
-  padding: 0;
+  padding: 8px;
   background: var(--background);
   color: var(--foreground);
   font-family: sans-serif;
   overflow-y: scroll;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  @media only screen and (min-width: 700px) {
+    padding: 16px;
+  }
 }
 
 body {
@@ -18,19 +25,14 @@ body {
   flex-direction: column;
   padding: 0;
   gap: 16px;
-  margin: 8px;
-
-  @media only screen and (min-width: 700px) {
-    margin: 16px;
-  }
+  width: 100%;
+  max-width: 1200px;
 
   .title {
     align-self: start;
     display: flex;
 
     img {
-      /* Negative margin removes padding from the image */
-      margin: 0 -1%;
       max-width: 100%;
       /* Disable the feature in Safari where the user can select OCR'd text in
        * images */

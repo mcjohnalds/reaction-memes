@@ -8,11 +8,10 @@ for (const [i, image] of images.entries()) {
   await sharp(`data/images/${image}`)
     .resize({
       width: 200,
-      height: 200,
       fit: "inside",
       withoutEnlargement: true,
     })
-    .webp()
+    .webp({ quality: 30 })
     .toFile(`data/thumbnails/${image}`);
   if (i % 100 === 0) {
     process.stdout.write(`${i + 1} / ${images.length}\n`);
