@@ -146,7 +146,7 @@ suite("static file", () => {
         expectedFile: "static/title.svg",
         expectedHeaders: {
           "Content-Type": "image/svg+xml",
-          "Cache-Control": "public, max-age=31536000, immutable",
+          "Cache-Control": "public, max-age=86400, immutable",
         },
       },
       {

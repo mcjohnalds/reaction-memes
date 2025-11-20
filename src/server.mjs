@@ -94,7 +94,8 @@ async function getStaticFileReply(url, dataDirectory) {
   } else {
     file = path.join("static", url.pathname);
     if (url.pathname === "/title.svg") {
-      cacheControl = "public, max-age=31536000, immutable";
+      // TODO: increase max age once we have hashes
+      cacheControl = "public, max-age=86400, immutable";
     } else {
       cacheControl = "no-cache";
     }
