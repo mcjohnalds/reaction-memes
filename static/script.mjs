@@ -60,6 +60,7 @@ class MosaicElement extends HTMLElement {
     while (true) {
       const { scrollHeight, clientHeight, scrollTop } =
         document.documentElement;
+      // TODO: lower this constant once I've balanced the mosaic
       const enoughImages =
         scrollHeight > scrollTop + 2 * clientHeight ||
         this.#imagesAdded === window.images.length;
