@@ -78,24 +78,26 @@ async function getReply(request, dataDirectory, encodings) {
 }
 
 async function getStaticFileReply(url, dataDirectory) {
-  let cacheControl = "no-cache";
   if (url.pathname.includes("..")) {
     // This is probably redundant but worth it just in case there is a bug in
     // the logic
     return { status: 404 };
   }
   let file;
+  let cacheControl;
   if (
     url.pathname.startsWith("/images/") ||
     url.pathname.startsWith("/thumbnails/")
   ) {
-    cacheControl = "public, max-age=31536000, immutable";
     file = path.join(dataDirectory, url.pathname);
+    cacheControl = "public, max-age=31536000, immutable";
   } else {
+    file = path.join("static", url.pathname);
     if (url.pathname === "/title.svg") {
       cacheControl = "public, max-age=31536000, immutable";
+    } else {
+      cacheControl = "no-cache";
     }
-    file = path.join("static", url.pathname);
   }
   try {
     await fs.promises.access(file);

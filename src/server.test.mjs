@@ -21,8 +21,14 @@ before(async () => {
     { file: "f.webp", vector: await encodeText("baz") },
   ];
   for (const encoding of encodings) {
-    await fs.promises.writeFile(`data-test/images/${encoding.file}`, "");
-    await fs.promises.writeFile(`data-test/thumbnails//${encoding.file}`, "");
+    await fs.promises.writeFile(
+      `data-test/images/${encoding.file}`,
+      encoding.file,
+    );
+    await fs.promises.writeFile(
+      `data-test/thumbnails//${encoding.file}`,
+      encoding.file,
+    );
   }
   const groups = [
     ["a.webp", "c.webp", "d.webp"],
@@ -116,67 +122,98 @@ suite("/search", () => {
   });
 });
 
-suite("static files", () => {
-  const tests = [
-    {
-      path: "/script.mjs",
-      headers: {
-        "Content-Type": "text/javascript",
-        "Cache-Control": "no-cache",
+suite("static file", () => {
+  suite("valid request", () => {
+    const tests = [
+      {
+        url: "/script.mjs",
+        expectedFile: "static/script.mjs",
+        expectedHeaders: {
+          "Content-Type": "text/javascript",
+          "Cache-Control": "no-cache",
+        },
       },
-    },
-    {
-      path: "/style.css",
-      headers: {
-        "Content-Type": "text/css",
-        "Cache-Control": "no-cache",
+      {
+        url: "/style.css",
+        expectedFile: "static/style.css",
+        expectedHeaders: {
+          "Content-Type": "text/css",
+          "Cache-Control": "no-cache",
+        },
       },
-    },
-    {
-      path: "/title.svg",
-      headers: {
-        "Content-Type": "image/svg+xml",
-        "Cache-Control": "public, max-age=31536000, immutable",
+      {
+        url: "/title.svg",
+        expectedFile: "static/title.svg",
+        expectedHeaders: {
+          "Content-Type": "image/svg+xml",
+          "Cache-Control": "public, max-age=31536000, immutable",
+        },
       },
-    },
-  ];
+      {
+        url: "/images/a.webp",
+        expectedFile: "data-test/images/a.webp",
+        expectedHeaders: {
+          "Content-Type": "image/webp",
+          "Cache-Control": "public, max-age=31536000, immutable",
+        },
+      },
+      {
+        url: "/thumbnails/a.webp",
+        expectedFile: "data-test/thumbnails/a.webp",
+        expectedHeaders: {
+          "Content-Type": "image/webp",
+          "Cache-Control": "public, max-age=31536000, immutable",
+        },
+      },
+    ];
 
-  for (const { path, headers } of tests) {
-    suite(path, () => {
-      test("GET", async () => {
-        const res = await request(path);
-        assert.equal(res.status, 200);
-        for (const [k, v] of Object.entries(headers)) {
-          assert.equal(res.headers.get(k), v);
-        }
-        const text = await res.text();
-        const file = await fs.promises.readFile(`static${path}`, {
-          encoding: "utf8",
+    for (const { url, expectedFile, expectedHeaders } of tests) {
+      suite(url, () => {
+        test("GET", async () => {
+          const res = await request(url);
+          assert.equal(res.status, 200);
+          for (const [k, v] of Object.entries(expectedHeaders)) {
+            assert.equal(res.headers.get(k), v);
+          }
+          const text = await res.text();
+          const file = await fs.promises.readFile(expectedFile, {
+            encoding: "utf8",
+          });
+          assert.equal(text, file);
         });
-        assert.equal(text, file);
-      });
 
-      test("HEAD", async () => {
-        const res = await request(path, { method: "HEAD" });
-        assert.equal(res.status, 200);
+        test("HEAD", async () => {
+          const res = await request(url, { method: "HEAD" });
+          assert.equal(res.status, 200);
+        });
       });
-    });
-  }
-});
-
-suite("/unsupported.txt", () => {
-  afterEach(async () => {
-    await fs.promises.rm("static/unsupported.txt", { force: true });
+    }
   });
 
-  test("GET", async () => {
-    await fs.promises.writeFile("static/unsupported.txt", "hello");
-    const res = await request("/unsupported.txt");
+  test("file does not exist", async () => {
+    const res = await request("/does-not-exist.js");
     assert.equal(res.status, 404);
   });
 
-  test("HEAD", async () => {
-    const res = await request("/unsupported.mjs", { method: "HEAD" });
+  suite("unsupported content type", () => {
+    afterEach(async () => {
+      await fs.promises.rm("static/unsupported.txt", { force: true });
+    });
+
+    test("GET", async () => {
+      await fs.promises.writeFile("static/unsupported.txt", "hello");
+      const res = await request("/unsupported.txt");
+      assert.equal(res.status, 404);
+    });
+
+    test("HEAD", async () => {
+      const res = await request("/unsupported.mjs", { method: "HEAD" });
+      assert.equal(res.status, 404);
+    });
+  });
+
+  test("path contains ..", async () => {
+    const res = await request("/../static/script.mjs");
     assert.equal(res.status, 404);
   });
 });
@@ -191,18 +228,6 @@ suite("/../static/script.mjs", () => {
 
   test("HEAD", async () => {
     const res = await request("/../static/script.mjs", { method: "HEAD" });
-    assert.equal(res.status, 404);
-  });
-});
-
-suite("/does-not-exist.mjs", () => {
-  test("GET", async () => {
-    const res = await request("/does-not-exist.mjs");
-    assert.equal(res.status, 404);
-  });
-
-  test("HEAD", async () => {
-    const res = await request("/does-not-exist.mjs", { method: "HEAD" });
     assert.equal(res.status, 404);
   });
 });
