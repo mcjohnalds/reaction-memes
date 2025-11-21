@@ -1,4 +1,4 @@
-class SearchForm extends HTMLElement {
+class SearchFormHTMLElement extends HTMLElement {
   get #input() {
     return this.querySelector("input");
   }
@@ -20,33 +20,8 @@ class SearchForm extends HTMLElement {
   }
 }
 
-class MosaicElement extends HTMLElement {
-  #resizeTimeoutId = null;
-  #clientWidthPrevious;
-
+class MosaicHTMLElement extends HTMLElement {
   connectedCallback() {
-    window.addEventListener("resize", () => {
-      this.#handleResize();
-    });
-    this.#loadImages();
-  }
-
-  async #handleResize() {
-    if (this.clientWidth === this.#clientWidthPrevious) {
-      // Safari on iOS seems to emit resize events even when nothing changes.
-      // Without this return, scrolling is glitchy.
-      //
-      // This happens only on physical iOS devices, not the simulator.
-      return;
-    }
-    this.#clientWidthPrevious = this.clientWidth;
-    if (this.#resizeTimeoutId !== null) {
-      clearTimeout(this.#resizeTimeoutId);
-    }
-    this.#resizeTimeoutId = setTimeout(() => this.#loadImages(), 100);
-  }
-
-  async #loadImages() {
     const columnWidth = 200;
     const columnCount = Math.max(Math.floor(this.clientWidth / columnWidth), 2);
     const fragment = new DocumentFragment();
@@ -60,7 +35,6 @@ class MosaicElement extends HTMLElement {
       const item = this.#createItem(image);
       fragment.children[columnIndex].appendChild(item);
     }
-    this.innerHTML = "";
     this.appendChild(fragment);
   }
 
@@ -84,5 +58,5 @@ class MosaicElement extends HTMLElement {
   }
 }
 
-customElements.define("x-search-form", SearchForm);
-customElements.define("x-mosaic", MosaicElement);
+customElements.define("x-search-form", SearchFormHTMLElement);
+customElements.define("x-mosaic", MosaicHTMLElement);
