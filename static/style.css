@@ -60,7 +60,7 @@ body {
   color: var(--background);
 }
 
-x-search-form {
+x-search {
   form {
     display: flex;
     flex-direction: row;

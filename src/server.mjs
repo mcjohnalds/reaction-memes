@@ -164,7 +164,7 @@ function getResultsPageReply(images, query) {
           <img src="/title.svg" />
         </a>
         <div class="subtitle">Find the perfect meme</div>
-        <x-search-form>
+        <x-search>
           <form method="get" action="/search">
             <div>
               <!-- Material UI search icon -->
@@ -180,7 +180,7 @@ function getResultsPageReply(images, query) {
             </div>
             <button type="submit" tabindex="0">Search</button>
           </form>
-        </x-search-form>
+        </x-search>
         <x-mosaic></x-mosaic>
         <script>
           window.images = ${JSON.stringify(data)};

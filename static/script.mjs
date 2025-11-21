@@ -1,4 +1,4 @@
-class SearchForm extends HTMLElement {
+class SearchHTMLElement extends HTMLElement {
   get #input() {
     return this.querySelector("input");
   }
@@ -20,7 +20,7 @@ class SearchForm extends HTMLElement {
   }
 }
 
-class MosaicElement extends HTMLElement {
+class MosaicHTMLElement extends HTMLElement {
   connectedCallback() {
     const columnWidth = 200;
     const columnCount = Math.max(Math.floor(this.clientWidth / columnWidth), 2);
@@ -35,24 +35,25 @@ class MosaicElement extends HTMLElement {
   }
 
   #createItem(image) {
-    // TODO: see if I can use innerHTML and get the same performance.
-    const a = document.createElement("a");
-    a.href = `/images/${image.file}`;
-    a.target = "_blank";
-    const img = document.createElement("img");
-    img.loading = "lazy";
-    img.width = image.width;
-    img.height = image.height;
-    a.appendChild(img);
     // TODO: optimize away the stutter during image load. Last resort: set
     // img.src in a queue.
     //
     // TODO: try delaying setting src to reduce how many images get loaded
     // initially
-    img.src = `/thumbnails/${image.file}`;
-    return a;
+    const template = document.createElement("template");
+    template.innerHTML = `
+      <a href="/images/${image.file}" target="_blank">
+        <img
+          loading="lazy"
+          width="${image.width}"
+          height="${image.height}"
+          src="/thumbnails/${image.file}"
+        />
+      </a>
+    `;
+    return template.content;
   }
 }
 
-customElements.define("x-search-form", SearchForm);
-customElements.define("x-mosaic", MosaicElement);
+customElements.define("x-search", SearchHTMLElement);
+customElements.define("x-mosaic", MosaicHTMLElement);
