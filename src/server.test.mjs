@@ -175,7 +175,7 @@ suite("static file", () => {
         expectedFile: "data-test/images/a.webp",
         expectedHeaders: {
           "Content-Type": "image/webp",
-          "Cache-Control": "public, max-age=31536000, immutable",
+          "Cache-Control": "public, max-age=86400, immutable",
         },
       },
       {
@@ -183,7 +183,7 @@ suite("static file", () => {
         expectedFile: "data-test/thumbnails/a.webp",
         expectedHeaders: {
           "Content-Type": "image/webp",
-          "Cache-Control": "public, max-age=31536000, immutable",
+          "Cache-Control": "public, max-age=86400, immutable",
         },
       },
     ];

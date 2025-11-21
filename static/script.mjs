@@ -28,9 +28,9 @@ class MosaicHTMLElement extends HTMLElement {
       this.appendChild(document.createElement("div"));
     }
     for (const [i, image] of window.images.entries()) {
-      const columnIndex = i % columnCount;
       const item = this.#createItem(image);
-      this.children[columnIndex].appendChild(item);
+      const column = this.children[i % columnCount];
+      column.appendChild(item);
     }
   }
 
@@ -46,7 +46,7 @@ class MosaicHTMLElement extends HTMLElement {
         />
       </a>
     `;
-    return template.content;
+    return template.content.children[0];
   }
 }
 

@@ -90,7 +90,7 @@ async function getStaticFileReply(url, dataDirectory) {
     url.pathname.startsWith("/thumbnails/")
   ) {
     file = path.join(dataDirectory, url.pathname);
-    cacheControl = "public, max-age=31536000, immutable";
+    cacheControl = "public, max-age=86400, immutable";
   } else {
     file = path.join("static", url.pathname);
     if (url.pathname === "/title.svg") {

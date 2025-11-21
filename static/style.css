@@ -33,6 +33,7 @@ body {
     display: flex;
 
     img {
+      cursor: pointer;
       max-width: 100%;
     }
   }
@@ -139,7 +140,8 @@ x-mosaic {
 
   img {
     width: 100%;
-    /* Need this so element has correct size before resource has loaded */
+    /* Need height: auto so element has correct size before resource has loaded */
     height: auto;
+    cursor: pointer;
   }
 }
