@@ -35,11 +35,6 @@ class MosaicHTMLElement extends HTMLElement {
   }
 
   #createItem(image) {
-    // TODO: optimize away the stutter during image load. Last resort: set
-    // img.src in a queue.
-    //
-    // TODO: try delaying setting src to reduce how many images get loaded
-    // initially
     const template = document.createElement("template");
     template.innerHTML = `
       <a href="/images/${image.file}" target="_blank">
