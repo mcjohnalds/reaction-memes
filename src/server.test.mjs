@@ -41,6 +41,15 @@ before(async () => {
   const ignore = ["f.webp"];
   await fs.promises.writeFile("data-test/ignore.json", JSON.stringify(ignore));
   await fs.promises.writeFile("data-test/similar.json", JSON.stringify(groups));
+  const sizes = [
+    { image: "a.webp", width: 1, height: 2 },
+    { image: "b.webp", width: 3, height: 4 },
+    { image: "c.webp", width: 5, height: 6 },
+    { image: "d.webp", width: 7, height: 8 },
+    { image: "e.webp", width: 9, height: 10 },
+    { image: "f.webp", width: 11, height: 12 },
+  ];
+  await fs.promises.writeFile("data-test/sizes.json", JSON.stringify(sizes));
   server = await createServer("data-test", consoleLog);
   server.listen(8081);
 });
@@ -64,9 +73,15 @@ suite("/", () => {
     const text = await res.text();
     assert(text.includes("<html>"));
     assert(text.includes('value=""'));
-    const images = getImages(text);
+    const images = getWindowImages(text);
     images.sort();
-    assert.equal(String(images), String(["a.webp", "b.webp"]));
+    assert.equal(
+      String(images),
+      String([
+        { image: "a.webp", width: 1, height: 2 },
+        { image: "b.webp", width: 3, height: 4 },
+      ]),
+    );
   });
 
   test("HEAD", async () => {
@@ -84,14 +99,17 @@ suite("/search", () => {
       const text = await res.text();
       assert(text.includes("<html>"));
       assert(text.includes('value="foo"'));
-      const images = getImages(text);
-      images.sort();
+      const images = getWindowImages(text);
+      images.sort((im) => im.image);
       // Excludes c.webp, d.webp which are too similar to a.webp
       //
       // Excludes e.webp which is too similar to b.webp
       //
       // Excludes f.webp which is in the ignore file
-      assert.equal(String(images), String(["a.webp", "b.webp"]));
+      assert.deepEqual(images, [
+        { file: "a.webp", width: 1, height: 2 },
+        { file: "b.webp", width: 3, height: 4 },
+      ]);
     });
 
     suite("returns most similar match first", () => {
@@ -103,8 +121,11 @@ suite("/search", () => {
         test(`case ${i + 1}`, async () => {
           const res = await request(`/search?query=${query}`);
           const text = await res.text();
-          const images = getImages(text);
-          assert.equal(String(images), String([expectedImages]));
+          const images = getWindowImages(text);
+          assert.deepEqual(
+            images.map((im) => im.file),
+            expectedImages,
+          );
         });
       }
     });
@@ -268,7 +289,7 @@ async function request(path, options) {
   return await fetch(`http://localhost:8081${path}`, options);
 }
 
-function getImages(html) {
+function getWindowImages(html) {
   const start = "window.images = ";
   const end = ";";
   const line = html.split("\n").find((l) => l.includes(start));

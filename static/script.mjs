@@ -21,7 +21,6 @@ class SearchForm extends HTMLElement {
 }
 
 class MosaicElement extends HTMLElement {
-  #imagesAdded = 0;
   #resizeTimeoutId = null;
   #clientWidthPrevious;
 
@@ -30,7 +29,6 @@ class MosaicElement extends HTMLElement {
       this.#handleResize();
     });
     this.#loadImages();
-    this.#startInfiniteScrollLoop();
   }
 
   async #handleResize() {
@@ -48,53 +46,42 @@ class MosaicElement extends HTMLElement {
     this.#resizeTimeoutId = setTimeout(() => this.#loadImages(), 100);
   }
 
-  #loadImages() {
-    this.#imagesAdded = 0;
+  async #loadImages() {
     const columnWidth = 200;
     const columnCount = Math.max(Math.floor(this.clientWidth / columnWidth), 2);
-    this.innerHTML = "<div></div>".repeat(columnCount);
-  }
-
-  async #startInfiniteScrollLoop() {
-    // Not pretty but optimized for good FPS. Do not change without profiling.
-    while (true) {
-      const { scrollHeight, clientHeight, scrollTop } =
-        document.documentElement;
-      // TODO: lower this constant once I've balanced the mosaic
-      const enoughImages =
-        scrollHeight > scrollTop + 2 * clientHeight ||
-        this.#imagesAdded === window.images.length;
-      if (enoughImages) {
-        // using wait(100) instead of wait(0) saves CPU
-        await wait(100);
-        continue;
-      }
-      // Let the thread breath to stop long UI pauses
-      await wait(0);
-      const i = this.#imagesAdded;
-      const columnCount = this.children.length;
-      const columnIndex = i % columnCount;
-      const item = this.#createItem(window.images[i]);
-      this.children[columnIndex].appendChild(item);
-      this.#imagesAdded++;
+    const fragment = new DocumentFragment();
+    // TODO: profile with vs without fragment optimization
+    for (let i = 0; i < columnCount; i++) {
+      fragment.appendChild(document.createElement("div"));
     }
+    for (const [i, image] of window.images.entries()) {
+      const columnCount = fragment.children.length;
+      const columnIndex = i % columnCount;
+      const item = this.#createItem(image);
+      fragment.children[columnIndex].appendChild(item);
+    }
+    this.innerHTML = "";
+    this.appendChild(fragment);
   }
 
   #createItem(image) {
-    // Calling createElement instead of using innerHTML or something boosts FPS
-    // a ton
+    // TODO: see if I can use innerHTML and get the same performance.
     const a = document.createElement("a");
-    a.href = `/images/${image}`;
+    a.href = `/images/${image.file}`;
     a.target = "_blank";
     const img = document.createElement("img");
-    img.src = `/thumbnails/${image}`;
+    img.loading = "lazy";
+    img.width = image.width;
+    img.height = image.height;
     a.appendChild(img);
+    // TODO: optimize away the stutter during image load. Last resort: set
+    // img.src in a queue.
+    //
+    // TODO: try delaying setting src to reduce how many images get loaded
+    // initially
+    img.src = `/thumbnails/${image.file}`;
     return a;
   }
-}
-
-async function wait(ms) {
-  await new Promise((r) => setTimeout(r, ms));
 }
 
 customElements.define("x-search-form", SearchForm);

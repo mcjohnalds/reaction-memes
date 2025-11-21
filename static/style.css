@@ -35,7 +35,7 @@ body {
     img {
       max-width: 100%;
       /* Disable the feature in Safari where the user can select OCR'd text in
-       * images */
+       * images. TODO: do this for the other images as well. */
       user-select: none;
       -webkit-user-select: none;
     }
@@ -143,6 +143,7 @@ x-mosaic {
 
   img {
     width: 100%;
-    height: 100%;
+    /* Need this so element has correct size before resource has loaded */
+    height: auto;
   }
 }

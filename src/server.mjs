@@ -6,7 +6,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { encodeText } from "./clip.mjs";
 
-const maxResults = 500;
+const maxResults = 200;
 const contentTypes = new Map([
   [".ico", "image/x-icon"],
   [".svg", "image/svg+xml"],
@@ -20,10 +20,10 @@ export async function createServer(
   dataDirectory = "data",
   consoleLog = console.log,
 ) {
-  const encodings = await getEncodings(dataDirectory);
+  const images = await getImages(dataDirectory);
   const server = http.createServer();
   server.on("request", (request, response) => {
-    handleRequest(request, response, dataDirectory, encodings, consoleLog);
+    handleRequest(request, response, dataDirectory, images, consoleLog);
   });
   return server;
 }
@@ -32,7 +32,7 @@ async function handleRequest(
   request,
   response,
   dataDirectory,
-  encodings,
+  images,
   consoleLog,
 ) {
   try {
@@ -40,7 +40,7 @@ async function handleRequest(
     const { status, headers, body, error } = await getReply(
       request,
       dataDirectory,
-      encodings,
+      images,
     );
     request.on("end", () => {
       const end = performance.now();
@@ -60,16 +60,16 @@ async function handleRequest(
   }
 }
 
-async function getReply(request, dataDirectory, encodings) {
+async function getReply(request, dataDirectory, images) {
   try {
     if (request.method !== "GET" && request.method !== "HEAD") {
       return { status: 404 };
     }
     const url = new URL(`https://example.com${request.url}`);
     if (url.pathname === "/") {
-      return getIndexPageReply(encodings);
+      return getIndexPageReply(images);
     } else if (url.pathname === "/search") {
-      return await getSearchPageReply(url, encodings);
+      return await getSearchPageReply(url, images);
     }
     return await getStaticFileReply(url, dataDirectory);
   } catch (error) {
@@ -121,14 +121,12 @@ async function getStaticFileReply(url, dataDirectory) {
   };
 }
 
-function getIndexPageReply(encodings) {
-  const images = encodings
-    .map((encoding) => encoding.file)
-    .slice(0, maxResults);
-  return getResultsPageReply(images, "");
+function getIndexPageReply(images) {
+  const results = images.slice(0, maxResults);
+  return getResultsPageReply(results, "");
 }
 
-async function getSearchPageReply(url, encodings) {
+async function getSearchPageReply(url, images) {
   const query = url.searchParams.get("query");
   if (query.length > 100) {
     return {
@@ -136,17 +134,23 @@ async function getSearchPageReply(url, encodings) {
     };
   }
   const textVec = await encodeText(query);
-  const results = [];
-  for (const encoding of encodings) {
-    const similarity = dotProduct(textVec, encoding.vector);
-    results.push({ file: encoding.file, similarity });
+  const map = new Map();
+  for (const image of images) {
+    const similarity = dotProduct(textVec, image.vector);
+    map.set(image, similarity);
   }
-  results.sort((a, b) => b.similarity - a.similarity);
-  const images = results.slice(0, maxResults).map((result) => result.file);
-  return getResultsPageReply(images, query);
+  let results = images.slice();
+  results.sort((a, b) => map.get(b) - map.get(a));
+  results = results.slice(0, maxResults);
+  return getResultsPageReply(results, query);
 }
 
 function getResultsPageReply(images, query) {
+  const data = images.map(({ file, width, height }) => ({
+    file,
+    width,
+    height,
+  }));
   const html = `
     <!DOCTYPE html>
     <html>
@@ -179,7 +183,7 @@ function getResultsPageReply(images, query) {
         </x-search-form>
         <x-mosaic></x-mosaic>
         <script>
-          window.images = ${JSON.stringify(images)};
+          window.images = ${JSON.stringify(data)};
         </script>
         <script src="/script.mjs" type="module"></script>
       </body>
@@ -193,7 +197,7 @@ function getResultsPageReply(images, query) {
   };
 }
 
-async function getEncodings(dataDirectory) {
+async function getImages(dataDirectory) {
   const encodingsFile = await fs.promises.readFile(
     `${dataDirectory}/encodings.json`,
     { encoding: "utf8" },
@@ -220,7 +224,22 @@ async function getEncodings(dataDirectory) {
       !tooSimilar.has(encoding.file) && !ignore.includes(encoding.file),
   );
   assert(encodings.length > filtered.length);
-  return filtered;
+  const sizesFile = await fs.promises.readFile(`${dataDirectory}/sizes.json`, {
+    encoding: "utf8",
+  });
+  const sizes = JSON.parse(sizesFile);
+  const sizesMap = new Map();
+  for (const { image, width, height } of sizes) {
+    sizesMap.set(image, { width, height });
+  }
+  const images = [];
+  for (const encoding of filtered) {
+    const size = sizesMap.get(encoding.file);
+    assert(size);
+    const { width, height } = size;
+    images.push({ ...encoding, width, height });
+  }
+  return images;
 }
 
 function logRequest(request, status, duration, consoleLog) {
