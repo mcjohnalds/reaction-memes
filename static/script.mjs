@@ -1,4 +1,4 @@
-class SearchFormHTMLElement extends HTMLElement {
+class SearchForm extends HTMLElement {
   get #input() {
     return this.querySelector("input");
   }
@@ -20,22 +20,18 @@ class SearchFormHTMLElement extends HTMLElement {
   }
 }
 
-class MosaicHTMLElement extends HTMLElement {
+class MosaicElement extends HTMLElement {
   connectedCallback() {
     const columnWidth = 200;
     const columnCount = Math.max(Math.floor(this.clientWidth / columnWidth), 2);
-    const fragment = new DocumentFragment();
-    // TODO: profile with vs without fragment optimization
     for (let i = 0; i < columnCount; i++) {
-      fragment.appendChild(document.createElement("div"));
+      this.appendChild(document.createElement("div"));
     }
     for (const [i, image] of window.images.entries()) {
-      const columnCount = fragment.children.length;
       const columnIndex = i % columnCount;
       const item = this.#createItem(image);
-      fragment.children[columnIndex].appendChild(item);
+      this.children[columnIndex].appendChild(item);
     }
-    this.appendChild(fragment);
   }
 
   #createItem(image) {
@@ -58,5 +54,5 @@ class MosaicHTMLElement extends HTMLElement {
   }
 }
 
-customElements.define("x-search-form", SearchFormHTMLElement);
-customElements.define("x-mosaic", MosaicHTMLElement);
+customElements.define("x-search-form", SearchForm);
+customElements.define("x-mosaic", MosaicElement);
