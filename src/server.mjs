@@ -198,42 +198,52 @@ function getResultsPageReply(images, query) {
 }
 
 async function getImages(dataDirectory) {
-  const encodingsFile = await fs.promises.readFile(
-    `${dataDirectory}/encodings.json`,
-    { encoding: "utf8" },
-  );
-  const encodings = JSON.parse(encodingsFile);
-  const similarFile = await fs.promises.readFile(
-    `${dataDirectory}/similar.json`,
-    { encoding: "utf8" },
-  );
-  const groups = JSON.parse(similarFile);
+  let encodings;
+  {
+    const encodingsFile = await fs.promises.readFile(
+      `${dataDirectory}/encodings.json`,
+      { encoding: "utf8" },
+    );
+    encodings = JSON.parse(encodingsFile);
+  }
   const tooSimilar = new Set();
-  for (const group of groups) {
-    for (const image of group.slice(1)) {
-      tooSimilar.add(image);
+  {
+    const similarFile = await fs.promises.readFile(
+      `${dataDirectory}/similar.json`,
+      { encoding: "utf8" },
+    );
+    const groups = JSON.parse(similarFile);
+    for (const group of groups) {
+      for (const image of group.slice(1)) {
+        tooSimilar.add(image);
+      }
     }
   }
-  const ignoreFile = await fs.promises.readFile(
-    `${dataDirectory}/ignore.json`,
-    { encoding: "utf8" },
-  );
-  const ignore = JSON.parse(ignoreFile);
-  const filtered = encodings.filter(
-    (encoding) =>
-      !tooSimilar.has(encoding.file) && !ignore.includes(encoding.file),
-  );
-  assert(encodings.length > filtered.length);
+  let filteredEncodings;
+  {
+    const ignoreFile = await fs.promises.readFile(
+      `${dataDirectory}/ignore.json`,
+      { encoding: "utf8" },
+    );
+    const ignore = JSON.parse(ignoreFile);
+    filteredEncodings = encodings.filter(
+      (encoding) =>
+        !tooSimilar.has(encoding.file) && !ignore.includes(encoding.file),
+    );
+    assert(encodings.length > filteredEncodings.length);
+  }
   const sizesFile = await fs.promises.readFile(`${dataDirectory}/sizes.json`, {
     encoding: "utf8",
   });
-  const sizes = JSON.parse(sizesFile);
   const sizesMap = new Map();
-  for (const { image, width, height } of sizes) {
-    sizesMap.set(image, { width, height });
+  {
+    const sizes = JSON.parse(sizesFile);
+    for (const { image, width, height } of sizes) {
+      sizesMap.set(image, { width, height });
+    }
   }
   const images = [];
-  for (const encoding of filtered) {
+  for (const encoding of filteredEncodings) {
     const size = sizesMap.get(encoding.file);
     assert(size);
     const { width, height } = size;
