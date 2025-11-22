@@ -136,9 +136,13 @@ x-mosaic {
 
   a {
     width: 100%;
+    /* display: block on a and the child img prevents weird padding */
+    display: block;
   }
 
   img {
+    /* display: block on a and the child img prevents weird padding */
+    display: block;
     width: 100%;
     /* Need height: auto so element has correct size before resource has loaded */
     height: auto;
