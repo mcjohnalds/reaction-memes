@@ -20,6 +20,7 @@ class SearchHTMLElement extends HTMLElement {
   }
 }
 
+// Optimized, do not change without profiling
 class MosaicHTMLElement extends HTMLElement {
   connectedCallback() {
     const columnWidth = 200;
@@ -43,8 +44,8 @@ class MosaicHTMLElement extends HTMLElement {
   }
 
   #createItem(image) {
-    const template = document.createElement("template");
-    template.innerHTML = `
+    const root = document.createElement("div");
+    root.innerHTML = `
       <a href="/images/${image.file}" target="_blank">
         <img
           loading="lazy"
@@ -54,7 +55,7 @@ class MosaicHTMLElement extends HTMLElement {
         />
       </a>
     `;
-    return template.content.children[0];
+    return root.children[0];
   }
 }
 
