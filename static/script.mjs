@@ -24,13 +24,21 @@ class MosaicHTMLElement extends HTMLElement {
   connectedCallback() {
     const columnWidth = 200;
     const columnCount = Math.max(Math.floor(this.clientWidth / columnWidth), 2);
+    const columnHeights = [];
     for (let i = 0; i < columnCount; i++) {
       this.appendChild(document.createElement("div"));
+      columnHeights.push(0);
     }
-    for (const [i, image] of window.images.entries()) {
+    for (const image of window.images.values()) {
       const item = this.#createItem(image);
-      const column = this.children[i % columnCount];
-      column.appendChild(item);
+      let shortest = 0;
+      for (let i = 0; i < columnCount; i++) {
+        if (columnHeights[i] < columnHeights[shortest]) {
+          shortest = i;
+        }
+      }
+      this.children[shortest].appendChild(item);
+      columnHeights[shortest] += image.height / image.width;
     }
   }
 
