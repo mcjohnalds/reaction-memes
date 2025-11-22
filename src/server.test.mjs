@@ -42,12 +42,12 @@ before(async () => {
   await fs.promises.writeFile("data-test/ignore.json", JSON.stringify(ignore));
   await fs.promises.writeFile("data-test/similar.json", JSON.stringify(groups));
   const sizes = [
-    { image: "a.webp", width: 1, height: 2 },
-    { image: "b.webp", width: 3, height: 4 },
-    { image: "c.webp", width: 5, height: 6 },
-    { image: "d.webp", width: 7, height: 8 },
-    { image: "e.webp", width: 9, height: 10 },
-    { image: "f.webp", width: 11, height: 12 },
+    { file: "a.webp", width: 1, height: 2 },
+    { file: "b.webp", width: 3, height: 4 },
+    { file: "c.webp", width: 5, height: 6 },
+    { file: "d.webp", width: 7, height: 8 },
+    { file: "e.webp", width: 9, height: 10 },
+    { file: "f.webp", width: 11, height: 12 },
   ];
   await fs.promises.writeFile("data-test/sizes.json", JSON.stringify(sizes));
   server = await createServer("data-test", consoleLog);

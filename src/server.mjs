@@ -238,15 +238,13 @@ async function getImages(dataDirectory) {
   const sizesMap = new Map();
   {
     const sizes = JSON.parse(sizesFile);
-    for (const { image, width, height } of sizes) {
-      sizesMap.set(image, { width, height });
+    for (const { file, width, height } of sizes) {
+      sizesMap.set(file, { width, height });
     }
   }
   const images = [];
   for (const encoding of filteredEncodings) {
-    const size = sizesMap.get(encoding.file);
-    assert(size);
-    const { width, height } = size;
+    const { width, height } = sizesMap.get(encoding.file);
     images.push({ ...encoding, width, height });
   }
   return images;
