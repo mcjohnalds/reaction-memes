@@ -124,8 +124,7 @@ async function getStaticFileReply(url, dataDirectory) {
 }
 
 function getIndexPageReply(images) {
-  const results = images.slice(0, maxResults);
-  return getResultsPageReply(results, "");
+  return getResultsPageReply(takeRandom(images, maxResults), "");
 }
 
 async function getSearchPageReply(url, images) {
@@ -272,6 +271,17 @@ function logRequest(request, status, duration, consoleLog) {
   consoleLog(JSON.stringify(log));
 }
 
+function takeRandom(xs, count) {
+  const taken = new Set();
+  while (taken.size < Math.min(count, xs.length)) {
+    const i = Math.floor(Math.random() * xs.length);
+    taken.add(xs[i]);
+  }
+  const ys = Array.from(taken);
+  assert(isSubarray(ys, xs));
+  return ys;
+}
+
 export function escapeHTML(s) {
   const lookup = {
     "&": "&amp;",
@@ -281,4 +291,32 @@ export function escapeHTML(s) {
     ">": "&gt;",
   };
   return s.replace(/[&"'<>]/g, (c) => lookup[c]);
+}
+
+export function isSubarray(xs, ys) {
+  const xCounts = new Map();
+  for (const x of xs) {
+    let count = 0;
+    if (xCounts.has(x)) {
+      count = xCounts.get(x);
+    }
+    xCounts.set(x, count + 1);
+  }
+  const yCounts = new Map();
+  for (const y of ys) {
+    let count = 0;
+    if (yCounts.has(y)) {
+      count = yCounts.get(y);
+    }
+    yCounts.set(y, count + 1);
+  }
+  for (const k of xCounts.keys()) {
+    if (!yCounts.has(k)) {
+      return false;
+    }
+    if (xCounts.get(k) > yCounts.get(k)) {
+      return false;
+    }
+  }
+  return true;
 }

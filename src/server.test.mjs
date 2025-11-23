@@ -1,4 +1,4 @@
-import { createServer, escapeHTML } from "./server.mjs";
+import { createServer, escapeHTML, isSubarray } from "./server.mjs";
 import fs from "node:fs";
 import { before, after, afterEach, test, suite, mock } from "node:test";
 import assert from "node:assert/strict";
@@ -274,6 +274,22 @@ test("escapeHTML()", () => {
   const str = `amp=& qout=" apos=' lt=< gt=>`;
   const expected = "amp=&amp; qout=&quot; apos=&apos; lt=&lt; gt=&gt;";
   assert.equal(escapeHTML(str), expected);
+});
+
+suite("isSubarray()", () => {
+  const tests = [
+    { xs: [1, 2, 2, 3], ys: [1, 2, 2, 2, 3, 4], expected: true },
+    { xs: [1, 2, 2, 3], ys: [1, 2, 2, 3], expected: true },
+    { xs: [1, 2, 3], ys: [1, 2, 3], expected: true },
+    { xs: [], ys: [], expected: true },
+    { xs: [1, 2, 2, 2, 2, 3], ys: [1, 2, 2, 2, 3, 4], expected: false },
+    { xs: [0], ys: [1, 2], expected: false },
+  ];
+  for (const t of tests) {
+    test(`isSubarray(${JSON.stringify(t.xs)}, ${JSON.stringify(t.ys)}) === ${t.expected}`, () => {
+      assert.equal(isSubarray(t.xs, t.ys), t.expected);
+    });
+  }
 });
 
 test("stress test", async () => {
