@@ -71,7 +71,7 @@ suite("/", () => {
     assert.equal(res.status, 200);
     assert.equal(res.headers.get("Content-Type"), "text/html");
     const text = await res.text();
-    assert(text.includes("<html>"));
+    assert(text.includes("<!DOCTYPE html>"));
     assert(text.includes('value=""'));
     const images = getWindowImages(text);
     images.sort();
@@ -97,7 +97,7 @@ suite("/search", () => {
       assert.equal(res.status, 200);
       assert.equal(res.headers.get("Content-Type"), "text/html");
       const text = await res.text();
-      assert(text.includes("<html>"));
+      assert(text.includes("<!DOCTYPE html>"));
       assert(text.includes('value="foo"'));
       const images = getWindowImages(text);
       images.sort((im) => im.image);
@@ -254,10 +254,11 @@ suite("/../static/script.mjs", () => {
 });
 
 test("logs requests", async () => {
-  const res = await request("/script.mjs");
-  // Call text() so that the callback in request.on("end", fn) gets triggered.
-  // Without this, the test is flakey.
-  await res.text();
+  const promise = new Promise((resolve) =>
+    consoleLog.mock.mockImplementation(resolve),
+  );
+  await request("/script.mjs");
+  await promise;
   assert.equal(consoleLog.mock.callCount(), 1);
   const args = consoleLog.mock.calls[0].arguments;
   const json = JSON.parse(args[0]);
