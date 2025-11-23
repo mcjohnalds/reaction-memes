@@ -20,6 +20,7 @@ const ignore = [
   "2404:e80:8225:0:6c51:c9c6:183f:a2cf",
   "2404:e80:8225:0:572:611e:b30a:849f",
   "2a02:26f7:e488:5704:0:9000:0:e",
+  "194.107.162.39",
 ];
 
 const stream = fs.createReadStream("data/logs.txt", { encoding: "utf8" });
