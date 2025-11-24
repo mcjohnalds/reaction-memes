@@ -38,16 +38,17 @@ async function handleRequest(
   consoleLog,
 ) {
   try {
+    let status, headers, body, error;
     let start = performance.now();
-    const { status, headers, body, error } = await getReply(
-      request,
-      dataDirectory,
-      images,
-    );
     request.on("end", () => {
       const end = performance.now();
       logRequest(request, status, end - start, consoleLog);
     });
+    ({ status, headers, body, error } = await getReply(
+      request,
+      dataDirectory,
+      images,
+    ));
     if (error) {
       console.error(error);
     }
