@@ -66,7 +66,7 @@ async function handleRequest(
 async function getReply(request, dataDirectory, images) {
   try {
     if (request.method !== "GET" && request.method !== "HEAD") {
-      return { status: 404 };
+      return get404PageReply();
     }
     const url = new URL(`https://example.com${request.url}`);
     if (url.pathname === "/") {
@@ -84,7 +84,7 @@ async function getStaticFileReply(url, dataDirectory) {
   if (url.pathname.includes("..")) {
     // This is probably redundant but worth it just in case there is a bug in
     // the logic
-    return { status: 404 };
+    return get404PageReply();
   }
   let file;
   let cacheControl;
@@ -106,12 +106,12 @@ async function getStaticFileReply(url, dataDirectory) {
   try {
     await fs.promises.access(file);
   } catch (error) {
-    return { status: 404 };
+    return get404PageReply();
   }
   const ext = path.extname(file);
   const contentType = contentTypes.get(ext);
   if (!contentType) {
-    return { status: 404 };
+    return get404PageReply();
   }
   const stream = fs.createReadStream(file);
   return {
@@ -153,7 +153,57 @@ function getResultsPageReply(images, query) {
     width,
     height,
   }));
-  const html = `
+  const html = renderHTMLPage({
+    title: "Reaction memes",
+    subtitle: "Find the perfect meme",
+    content: `
+      <x-search>
+        <form method="get" action="/search">
+          <div>
+            <!-- Material UI search icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
+            <input
+              name="query"
+              autofocus
+              maxlength="100"
+              type="search"
+              value="${escapeHTML(query)}"
+              required
+            />
+          </div>
+          <button type="submit" tabindex="0">Search</button>
+        </form>
+      </x-search>
+      <x-mosaic></x-mosaic>
+      <script>
+        window.images = ${JSON.stringify(data)};
+      </script>
+    `,
+  });
+  const body = Readable.from([html]);
+  return {
+    status: 200,
+    headers: { "Content-Type": "text/html" },
+    body,
+  };
+}
+
+function get404PageReply() {
+  const html = renderHTMLPage({
+    title: "Page not found | Reaction Memes",
+    subtitle: "Page not found",
+    content: "",
+  });
+  const body = Readable.from([html]);
+  return {
+    status: 404,
+    headers: { "Content-Type": "text/html" },
+    body,
+  };
+}
+
+function renderHTMLPage({ title, subtitle, content }) {
+  return `
     <!DOCTYPE html>
     <html lang="en">
       <head>
@@ -163,45 +213,19 @@ function getResultsPageReply(images, query) {
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
         <link rel="manifest" href="/site.webmanifest">
-        <title>Reaction Memes</title>
+        <title>${title}</title>
         <link rel="stylesheet" href="/style.css" type="text/css" />
       </head>
       <body>
         <a href="/" class="title" >
           <img src="/title.svg" />
         </a>
-        <div class="subtitle">Find the perfect meme</div>
-        <x-search>
-          <form method="get" action="/search">
-            <div>
-              <!-- Material UI search icon -->
-              <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
-              <input
-                name="query"
-                autofocus
-                maxlength="100"
-                type="search"
-                value="${escapeHTML(query)}"
-                required
-              />
-            </div>
-            <button type="submit" tabindex="0">Search</button>
-          </form>
-        </x-search>
-        <x-mosaic></x-mosaic>
-        <script>
-          window.images = ${JSON.stringify(data)};
-        </script>
+        <div class="subtitle">${subtitle}</div>
+        ${content}
         <script src="/script.mjs" type="module"></script>
       </body>
     </html>
   `;
-  const body = Readable.from([html]);
-  return {
-    status: 200,
-    headers: { "Content-Type": "text/html" },
-    body,
-  };
 }
 
 async function getImages(dataDirectory) {

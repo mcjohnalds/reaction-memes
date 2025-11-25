@@ -211,9 +211,11 @@ suite("static file", () => {
     }
   });
 
-  test("file does not exist", async () => {
-    const res = await request("/does-not-exist.js");
+  test("resource does not exist", async () => {
+    const res = await request("/does-not-exist");
     assert.equal(res.status, 404);
+    const text = await res.text();
+    assert(text.includes("<title>Page not found | Reaction Memes</title>"));
   });
 
   suite("unsupported content type", () => {
