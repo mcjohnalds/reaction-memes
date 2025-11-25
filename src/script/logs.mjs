@@ -22,6 +22,7 @@ const ignoredAUIPs = [
   "2404:e80:8225:0:572:611e:b30a:849f",
   "2a02:26f7:e488:5704:0:9000:0:e",
   "194.107.162.39",
+  "2a02:26f7:e488:5704:0:5000:0:6",
 ];
 const ignoredAgents = [
   / UptimeRobot\//,
@@ -78,6 +79,12 @@ for await (const line of rl) {
 }
 
 for (const log of logs) {
+  if (log.url.startsWith("/thumbnails/")) {
+    continue;
+  }
+  if (!log.url.startsWith("/search?")) {
+    continue;
+  }
   console.log(log);
 }
 console.log();
