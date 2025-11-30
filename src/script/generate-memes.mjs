@@ -6,22 +6,22 @@ import { encodeImage, encodeText } from "../clip.mjs";
 import { dotProduct } from "../math.mjs";
 
 const postsFilePath = "data/shift/reactionmemes.jsonl";
+const badEmbedding = await encodeText("nigga");
 
 async function main(dataDirectory) {
   await fs.promises.mkdir(`${dataDirectory}/memes`, { recursive: true });
   await fs.promises.mkdir(`${dataDirectory}/cached-responses`, {
     recursive: true,
   });
+  await generateMemes(dataDirectory);
+  await generateMemeSimilarities(dataDirectory);
+}
+
+async function generateMemes(dataDirectory) {
   const posts = await readPostsFile();
-  let t1 = performance.now();
-  for (const [i, post] of posts.entries()) {
-    console.log(`Post ${i + 1} / ${posts.length}`);
-    const stride = 100;
-    if (i % stride === 0 && i > 0) {
-      const t2 = performance.now();
-      const rate = stride / ((t2 - t1) / 1000);
-      console.log(`Posts/second ${rate.toFixed(2)}`);
-    }
+  const maxPosts = 1000;
+  for (const [i, post] of posts.slice(0, maxPosts).entries()) {
+    console.log(`Scraping ${i + 1} / ${posts.length}`);
     if (post.score < 10) {
       // Ignore low-quality posts
       continue;
@@ -46,21 +46,45 @@ async function main(dataDirectory) {
   }
 }
 
+async function generateMemeSimilarities(dataDirectory) {
+  let n = 1;
+  const as = sql.iterate`SELECT id, json(embedding) AS embedding FROM meme`;
+  for (const a of as) {
+    const aEmbedding = JSON.parse(a.embedding);
+    console.log(`Similarity ${n++}`);
+    sql.run`DELETE FROM similar_meme WHERE a = ${BigInt(a.id)} OR b = ${BigInt(a.id)}`;
+    const bs = sql.iterate`SELECT id, json(embedding) AS embedding FROM meme WHERE id > ${BigInt(a.id)}`;
+    for (const b of bs) {
+      const similarity = dotProduct(aEmbedding, JSON.parse(b.embedding));
+      if (similarity > 0.97) {
+        sql.run`
+        INSERT INTO similar_meme(a, b)
+        VALUES(${BigInt(a.id)}, ${BigInt(b.id)})
+      `;
+      }
+    }
+  }
+}
+
 async function scrapeURL(url, dataDirectory) {
   const bytes = await getImage(url, dataDirectory);
   if (!bytes) {
     return;
   }
-  const existingMeme = sql.get`SELECT file FROM meme WHERE source = ${url}`;
+  const existingMeme = sql.get`
+    SELECT file, json(embedding) AS embedding
+    FROM meme WHERE source = ${url}
+  `;
   const memeFile =
     existingMeme?.file ?? `${dataDirectory}/memes/${crypto.randomUUID()}.webp`;
   const image = await sharp(bytes);
   const { width, height } = await image.metadata();
-  await image.webp().toFile(memeFile);
-  const embedding = await encodeImage(memeFile);
-  const badEmbedding = await encodeText("nigga");
+  await image.toFile(memeFile);
+  const embedding = existingMeme?.embedding
+    ? JSON.parse(existingMeme.embedding)
+    : await encodeImage(memeFile);
   const naughty = dotProduct(badEmbedding, embedding) > 0.99;
-  const { id } = sql.get`
+  sql.run`
     INSERT INTO meme(file, embedding, width, height, naughty, source)
     VALUES(
       ${memeFile},
@@ -75,23 +99,7 @@ async function scrapeURL(url, dataDirectory) {
       width = excluded.width,
       height = excluded.height,
       naughty = excluded.naughty
-    RETURNING id
   `;
-  sql.run`DELETE FROM similar_meme WHERE a = ${id} OR b = ${id}`;
-  for (const meme of sql.iterate`SELECT id, json(embedding) AS embedding FROM meme`) {
-    if (id === meme.id) {
-      continue;
-    }
-    const similarity = dotProduct(embedding, JSON.parse(meme.embedding));
-    if (similarity > 0.97) {
-      const a = Math.min(id, meme.id);
-      const b = Math.max(id, meme.id);
-      sql.run`
-        INSERT INTO similar_meme(a, b)
-        VALUES(${BigInt(a)}, ${BigInt(b)})
-      `;
-    }
-  }
 }
 
 /**
