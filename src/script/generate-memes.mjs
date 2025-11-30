@@ -13,8 +13,15 @@ async function main(dataDirectory) {
     recursive: true,
   });
   const posts = await readPostsFile();
+  let t1 = performance.now();
   for (const [i, post] of posts.entries()) {
     console.log(`Post ${i + 1} / ${posts.length}`);
+    const stride = 100;
+    if (i % stride === 0 && i > 0) {
+      const t2 = performance.now();
+      const rate = stride / ((t2 - t1) / 1000);
+      console.log(`Posts/second ${rate.toFixed(2)}`);
+    }
     if (post.score < 10) {
       // Ignore low-quality posts
       continue;
@@ -40,27 +47,8 @@ async function main(dataDirectory) {
 }
 
 async function scrapeURL(url, dataDirectory) {
-  let status;
-  let bytes;
-  const cachedResponse = sql.get`
-    SELECT * FROM cached_response WHERE url = ${url}
-  `;
-  if (cachedResponse) {
-    status = cachedResponse.status;
-    bytes = await fs.promises.readFile(cachedResponse.file);
-  } else {
-    ({ status, bytes } = await fetchWithRetry(url));
-    const uuid = crypto.randomUUID();
-    const cacheFile = `${dataDirectory}/cached-responses/${uuid}`;
-    await fs.promises.writeFile(cacheFile, bytes);
-    sql.run`
-      INSERT INTO cached_response(url, status, file)
-      VALUES(${url}, ${BigInt(status)}, ${cacheFile})
-    `;
-    // Wait to prevent API rate limit
-    await setTimeout(1_000);
-  }
-  if (status !== 200) {
+  const bytes = await getImage(url, dataDirectory);
+  if (!bytes) {
     return;
   }
   const existingMeme = sql.get`SELECT file FROM meme WHERE source = ${url}`;
@@ -106,28 +94,53 @@ async function scrapeURL(url, dataDirectory) {
   }
 }
 
-async function fetchWithRetry(url) {
-  let timeout = 1000;
-  while (true) {
-    let error;
-    try {
-      const response = await fetch(url, {
-        headers: { "user-agent": "curl/8.1.2" },
-      });
-      const status = response.status;
-      const bytes = await response.bytes();
-      if (status === 200 || (status >= 400 && status < 500)) {
-        return { status, bytes };
+/**
+ * Get image from URL. Retry 5XX responses and network errors. Cache responses.
+ */
+async function getImage(url, dataDirectory) {
+  let status;
+  let bytes;
+  const cachedResponse = sql.get`
+    SELECT * FROM cached_response WHERE url = ${url}
+  `;
+  if (cachedResponse) {
+    status = cachedResponse.status;
+    bytes = await fs.promises.readFile(cachedResponse.file);
+  } else {
+    let timeout = 1000;
+    while (true) {
+      let error;
+      try {
+        const response = await fetch(url, {
+          headers: { "user-agent": "curl/8.1.2" },
+        });
+        status = response.status;
+        bytes = await response.bytes();
+        if (status < 500) {
+          break;
+        }
+      } catch (e) {
+        console.error(e);
+        error = e;
       }
-    } catch (e) {
-      console.error(e);
-      error = e;
+      if (error || response.status >= 500) {
+        console.log("Retrying");
+        await setTimeout(timeout);
+        timeout *= 2;
+      }
     }
-    if (error || response.status >= 500) {
-      console.log("Retrying");
-      await setTimeout(timeout);
-      timeout *= 2;
-    }
+    const uuid = crypto.randomUUID();
+    const cacheFile = `${dataDirectory}/cached-responses/${uuid}`;
+    await fs.promises.writeFile(cacheFile, bytes);
+    sql.run`
+      INSERT INTO cached_response(url, status, file)
+      VALUES(${url}, ${BigInt(status)}, ${cacheFile})
+    `;
+    // Wait to prevent API rate limit
+    await setTimeout(1_000);
+  }
+  if (status === 200) {
+    return bytes;
   }
 }
 
