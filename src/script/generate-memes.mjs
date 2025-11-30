@@ -119,4 +119,4 @@ async function readPostsFile() {
     .map((line) => JSON.parse(line));
 }
 
-main();
+main("data");
