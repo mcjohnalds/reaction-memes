@@ -18,7 +18,7 @@ db.exec(`
     embedding,
     width,
     height,
-    hidden,
+    naughty,
     source UNIQUE
   );
   CREATE TABLE IF NOT EXISTS similar_meme(

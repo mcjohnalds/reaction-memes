@@ -2,6 +2,8 @@ import { setTimeout } from "node:timers/promises";
 import fs from "node:fs";
 import sharp from "sharp";
 import sql from "../sql.mjs";
+import { encodeImage, encodeText } from "../clip.mjs";
+import { dotProduct } from "../math.mjs";
 
 const postsFilePath = "data/shift/reactionmemes.jsonl";
 
@@ -38,7 +40,6 @@ async function main(dataDirectory) {
 }
 
 async function scrapeURL(url, dataDirectory) {
-  console.log(`Scrape ${url}`);
   let status;
   let bytes;
   const cachedResponse = sql.get`
@@ -65,21 +66,44 @@ async function scrapeURL(url, dataDirectory) {
   const existingMeme = sql.get`SELECT file FROM meme WHERE source = ${url}`;
   const memeFile =
     existingMeme?.file ?? `${dataDirectory}/memes/${crypto.randomUUID()}.webp`;
-  await sharp(bytes).webp().toFile(memeFile);
-  const embedding = null;
-  const width = null;
-  const height = null;
-  const hidden = null;
-  sql.run`
-    INSERT INTO meme(file, embedding, width, height, hidden, source)
-    VALUES(${memeFile}, ${embedding}, ${width}, ${height}, ${hidden}, ${url})
+  const image = await sharp(bytes);
+  const { width, height } = await image.metadata();
+  await image.webp().toFile(memeFile);
+  const embedding = await encodeImage(memeFile);
+  const badEmbedding = await encodeText("nigga");
+  const naughty = dotProduct(badEmbedding, embedding) > 0.99;
+  const { id } = sql.get`
+    INSERT INTO meme(file, embedding, width, height, naughty, source)
+    VALUES(
+      ${memeFile},
+      jsonb(${JSON.stringify(embedding)}),
+      ${BigInt(width)},
+      ${BigInt(height)},
+      ${BigInt(naughty)},
+      ${url}
+    )
     ON CONFLICT DO UPDATE SET
       embedding = excluded.embedding,
       width = excluded.width,
       height = excluded.height,
-      hidden = excluded.hidden
+      naughty = excluded.naughty
+    RETURNING id
   `;
-  process.stdout.write(`${memeFile}\n`);
+  sql.run`DELETE FROM similar_meme WHERE a = ${id} OR b = ${id}`;
+  for (const meme of sql.iterate`SELECT id, json(embedding) AS embedding FROM meme`) {
+    if (id === meme.id) {
+      continue;
+    }
+    const similarity = dotProduct(embedding, JSON.parse(meme.embedding));
+    if (similarity > 0.97) {
+      const a = Math.min(id, meme.id);
+      const b = Math.max(id, meme.id);
+      sql.run`
+        INSERT INTO similar_meme(a, b)
+        VALUES(${BigInt(a)}, ${BigInt(b)})
+      `;
+    }
+  }
 }
 
 async function fetchWithRetry(url) {
@@ -87,12 +111,10 @@ async function fetchWithRetry(url) {
   while (true) {
     let error;
     try {
-      console.log(`GET ${url}`);
       const response = await fetch(url, {
         headers: { "user-agent": "curl/8.1.2" },
       });
       const status = response.status;
-      console.log(`response.status = ${response.status}`);
       const bytes = await response.bytes();
       if (status === 200 || (status >= 400 && status < 500)) {
         return { status, bytes };
