@@ -4,23 +4,29 @@ import sharp from "sharp";
 import sql from "../sql.mjs";
 import { encodeImage, encodeText } from "../clip.mjs";
 import { dotProduct } from "../math.mjs";
+import uuidv7 from "../uuidv7.mjs";
+import assert from "node:assert";
 
 const postsFilePath = "data/shift/reactionmemes.jsonl";
-const badEmbedding = await encodeText("nigga");
+const naughtyEmbedding = await encodeText("nigga");
 
 async function main(dataDirectory) {
-  await fs.promises.mkdir(`${dataDirectory}/memes`, { recursive: true });
-  await fs.promises.mkdir(`${dataDirectory}/cached-responses`, {
-    recursive: true,
-  });
   await generateMemes(dataDirectory);
-  await generateMemeSimilarities(dataDirectory);
+  await generateMemeSimilarities();
 }
 
 async function generateMemes(dataDirectory) {
+  await fs.promises.mkdir(`${dataDirectory}/memes`, {
+    recursive: true,
+  });
+  await fs.promises.mkdir(`${dataDirectory}/cached-responses`, {
+    recursive: true,
+  });
+  await fs.promises.mkdir(`${dataDirectory}/thumbnails-new`, {
+    recursive: true,
+  });
   const posts = await readPostsFile();
-  const maxPosts = 1000;
-  for (const [i, post] of posts.slice(0, maxPosts).entries()) {
+  for (const [i, post] of posts.entries()) {
     console.log(`Scraping ${i + 1} / ${posts.length}`);
     if (post.score < 10) {
       // Ignore low-quality posts
@@ -46,20 +52,20 @@ async function generateMemes(dataDirectory) {
   }
 }
 
-async function generateMemeSimilarities(dataDirectory) {
+async function generateMemeSimilarities() {
   let n = 1;
   const as = sql.iterate`SELECT id, json(embedding) AS embedding FROM meme`;
   for (const a of as) {
     const aEmbedding = JSON.parse(a.embedding);
     console.log(`Similarity ${n++}`);
-    sql.run`DELETE FROM similar_meme WHERE a = ${BigInt(a.id)} OR b = ${BigInt(a.id)}`;
-    const bs = sql.iterate`SELECT id, json(embedding) AS embedding FROM meme WHERE id > ${BigInt(a.id)}`;
+    sql.run`DELETE FROM similar_meme WHERE a = ${a.id} OR b = ${a.id}`;
+    const bs = sql.iterate`SELECT id, json(embedding) AS embedding FROM meme WHERE id > ${a.id}`;
     for (const b of bs) {
       const similarity = dotProduct(aEmbedding, JSON.parse(b.embedding));
       if (similarity > 0.97) {
         sql.run`
         INSERT INTO similar_meme(a, b)
-        VALUES(${BigInt(a.id)}, ${BigInt(b.id)})
+        VALUES(${a.id}, ${b.id})
       `;
       }
     }
@@ -72,22 +78,38 @@ async function scrapeURL(url, dataDirectory) {
     return;
   }
   const existingMeme = sql.get`
-    SELECT file, json(embedding) AS embedding
-    FROM meme WHERE source = ${url}
+    SELECT id, json(embedding) AS embedding
+    FROM meme
+    WHERE source = ${url}
   `;
-  const memeFile =
-    existingMeme?.file ?? `${dataDirectory}/memes/${crypto.randomUUID()}.webp`;
+  const id = existingMeme?.id ?? uuidv7();
+  const memeFile = `${dataDirectory}/memes/${id.toHex()}.webp`;
+  const thumbnailFile = `${dataDirectory}/thumbnails-new/${id.toHex()}.webp`;
   const image = await sharp(bytes);
   const { width, height } = await image.metadata();
-  await image.toFile(memeFile);
-  const embedding = existingMeme?.embedding
-    ? JSON.parse(existingMeme.embedding)
-    : await encodeImage(memeFile);
-  const naughty = dotProduct(badEmbedding, embedding) > 0.99;
+  await image
+    .resize({
+      width: 1000,
+      height: 1000,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .toFile(memeFile);
+  await image
+    .resize({
+      width: 200,
+      height: 1000,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .webp({ quality: 50 })
+    .toFile(thumbnailFile);
+  const embedding = await encodeImage(memeFile);
+  const naughty = dotProduct(naughtyEmbedding, embedding) > 0.99;
   sql.run`
-    INSERT INTO meme(file, embedding, width, height, naughty, source)
+    INSERT INTO meme(id, embedding, width, height, naughty, source)
     VALUES(
-      ${memeFile},
+      ${id},
       jsonb(${JSON.stringify(embedding)}),
       ${BigInt(width)},
       ${BigInt(height)},
@@ -106,50 +128,48 @@ async function scrapeURL(url, dataDirectory) {
  * Get image from URL. Retry 5XX responses and network errors. Cache responses.
  */
 async function getImage(url, dataDirectory) {
-  let status;
-  let bytes;
   const cachedResponse = sql.get`
-    SELECT * FROM cached_response WHERE url = ${url}
+    SELECT id FROM cached_response WHERE url = ${url}
   `;
+  let bytes = null;
   if (cachedResponse) {
-    status = cachedResponse.status;
-    bytes = await fs.promises.readFile(cachedResponse.file);
+    const file = `${dataDirectory}/cached-responses/${cachedResponse.id.toHex()}`;
+    try {
+      bytes = await fs.promises.readFile(file);
+    } catch {}
   } else {
+    // Wait to prevent API rate limit
+    await setTimeout(1000);
     let timeout = 1000;
     while (true) {
-      let error;
       try {
         const response = await fetch(url, {
           headers: { "user-agent": "curl/8.1.2" },
         });
-        status = response.status;
-        bytes = await response.bytes();
-        if (status < 500) {
-          break;
+        assert(response.status < 500);
+        if (response.status === 200) {
+          bytes = await response.bytes();
         }
-      } catch (e) {
-        console.error(e);
-        error = e;
-      }
-      if (error || response.status >= 500) {
-        console.log("Retrying");
+        break;
+      } catch (error) {
+        console.error(
+          new Error("Fetch failed with retryable error", { cause: error }),
+        );
         await setTimeout(timeout);
         timeout *= 2;
       }
     }
-    const uuid = crypto.randomUUID();
-    const cacheFile = `${dataDirectory}/cached-responses/${uuid}`;
-    await fs.promises.writeFile(cacheFile, bytes);
+    const id = uuidv7();
+    if (bytes) {
+      const cacheFile = `${dataDirectory}/cached-responses/${id.toHex()}`;
+      await fs.promises.writeFile(cacheFile, bytes);
+    }
     sql.run`
-      INSERT INTO cached_response(url, status, file)
-      VALUES(${url}, ${BigInt(status)}, ${cacheFile})
+      INSERT INTO cached_response(id, url)
+      VALUES(${id}, ${url})
     `;
-    // Wait to prevent API rate limit
-    await setTimeout(1_000);
   }
-  if (status === 200) {
-    return bytes;
-  }
+  return bytes;
 }
 
 async function readPostsFile() {

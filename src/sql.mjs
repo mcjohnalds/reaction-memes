@@ -13,8 +13,7 @@ db.exec(`
   PRAGMA temp_store = MEMORY;
   BEGIN IMMEDIATE;
   CREATE TABLE IF NOT EXISTS meme(
-    id INTEGER PRIMARY KEY,
-    file UNIQUE,
+    id BLOB PRIMARY KEY,
     embedding,
     width,
     height,
@@ -28,9 +27,8 @@ db.exec(`
     CHECK(a < b)
   );
   CREATE TABLE IF NOT EXISTS cached_response(
-    url TEXT PRIMARY KEY,
-    status,
-    file UNIQUE
+    id BLOB PRIMARY KEY,
+    url TEXT UNIQUE
   );
   COMMIT;
 `);
