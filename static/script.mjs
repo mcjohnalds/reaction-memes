@@ -51,7 +51,7 @@ class MosaicHTMLElement extends HTMLElement {
           loading="lazy"
           width="${meme.width}"
           height="${meme.height}"
-          src="/thumbnails-new/${meme.id}.webp"
+          src="/thumbnails/${meme.id}.webp"
         />
       </a>
     `;

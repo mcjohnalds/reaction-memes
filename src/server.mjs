@@ -91,7 +91,7 @@ async function getStaticFileReply(url, dataDirectory) {
   let cacheControl;
   if (
     url.pathname.startsWith("/memes/") ||
-    url.pathname.startsWith("/thumbnails-new/")
+    url.pathname.startsWith("/thumbnails/")
   ) {
     file = path.join(dataDirectory, url.pathname);
     cacheControl = "public, max-age=86400, immutable";

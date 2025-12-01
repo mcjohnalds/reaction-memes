@@ -64,7 +64,7 @@ const testSimilarMemes = [
 before(async () => {
   await fs.promises.rm("data-test", { recursive: true, force: true });
   await fs.promises.mkdir("data-test/memes", { recursive: true });
-  await fs.promises.mkdir("data-test/thumbnails-new", { recursive: true });
+  await fs.promises.mkdir("data-test/thumbnails", { recursive: true });
   const sql = getSQL("data-test");
   for (const meme of testMemes) {
     sql.run`
@@ -82,7 +82,7 @@ before(async () => {
       `${meme.id.toHex()} image`,
     );
     await fs.promises.writeFile(
-      `data-test/thumbnails-new/${meme.id.toHex()}.webp`,
+      `data-test/thumbnails/${meme.id.toHex()}.webp`,
       `${meme.id.toHex()} thumbnail`,
     );
   }
@@ -219,8 +219,8 @@ suite("static file", () => {
         },
       },
       {
-        url: `/thumbnails-new/${testMemes[0].id.toHex()}.webp`,
-        expectedFile: `data-test/thumbnails-new/${testMemes[0].id.toHex()}.webp`,
+        url: `/thumbnails/${testMemes[0].id.toHex()}.webp`,
+        expectedFile: `data-test/thumbnails/${testMemes[0].id.toHex()}.webp`,
         expectedHeaders: {
           "Content-Type": "image/webp",
           "Cache-Control": "public, max-age=86400, immutable",

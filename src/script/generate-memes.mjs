@@ -23,7 +23,7 @@ async function generateMemes(dataDirectory) {
   await fs.promises.mkdir(`${dataDirectory}/cached-responses`, {
     recursive: true,
   });
-  await fs.promises.mkdir(`${dataDirectory}/thumbnails-new`, {
+  await fs.promises.mkdir(`${dataDirectory}/thumbnails`, {
     recursive: true,
   });
   const posts = await readPostsFile();
@@ -85,7 +85,7 @@ async function scrapeURL(url, dataDirectory) {
   `;
   const id = existingMeme?.id ?? uuidv7();
   const memeFile = `${dataDirectory}/memes/${id.toHex()}.webp`;
-  const thumbnailFile = `${dataDirectory}/thumbnails-new/${id.toHex()}.webp`;
+  const thumbnailFile = `${dataDirectory}/thumbnails/${id.toHex()}.webp`;
   const image = await sharp(bytes);
   const { width, height } = await image.metadata();
   await image
