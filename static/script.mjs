@@ -30,8 +30,8 @@ class MosaicHTMLElement extends HTMLElement {
       this.appendChild(document.createElement("div"));
       columnHeights.push(0);
     }
-    for (const image of window.images.values()) {
-      const item = this.#createItem(image);
+    for (const meme of window.memes.values()) {
+      const item = this.#createItem(meme);
       let shortest = 0;
       for (let i = 0; i < columnCount; i++) {
         if (columnHeights[i] < columnHeights[shortest]) {
@@ -39,19 +39,19 @@ class MosaicHTMLElement extends HTMLElement {
         }
       }
       this.children[shortest].appendChild(item);
-      columnHeights[shortest] += image.height / image.width;
+      columnHeights[shortest] += meme.height / meme.width;
     }
   }
 
-  #createItem(image) {
+  #createItem(meme) {
     const root = document.createElement("div");
     root.innerHTML = `
-      <a href="/memes/${image.file}" target="_blank">
+      <a href="/memes/${meme.id}.webp" target="_blank">
         <img
           loading="lazy"
-          width="${image.width}"
-          height="${image.height}"
-          src="/thumbnails-new/${image.file}"
+          width="${meme.width}"
+          height="${meme.height}"
+          src="/thumbnails-new/${meme.id}.webp"
         />
       </a>
     `;

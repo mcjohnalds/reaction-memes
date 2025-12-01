@@ -112,13 +112,13 @@ suite("/", () => {
     const text = await res.text();
     assert(text.includes("<!DOCTYPE html>"));
     assert(text.includes('value=""'));
-    const images = getWindowImages(text);
-    images.sort((a, b) => a.width - b.width);
+    const memes = getWindowMemes(text);
+    memes.sort((a, b) => a.width - b.width);
     assert.equal(
-      JSON.stringify(images),
+      JSON.stringify(memes),
       JSON.stringify([
-        { file: testMemes[0].id.toHex() + ".webp", width: 1, height: 2 },
-        { file: testMemes[1].id.toHex() + ".webp", width: 3, height: 4 },
+        { id: testMemes[0].id.toHex(), width: 1, height: 2 },
+        { id: testMemes[1].id.toHex(), width: 3, height: 4 },
       ]),
     );
   });
@@ -138,16 +138,11 @@ suite("/search", () => {
       const text = await res.text();
       assert(text.includes("<!DOCTYPE html>"));
       assert(text.includes('value="foo"'));
-      const images = getWindowImages(text);
-      images.sort((im) => im.image);
-      // Excludes c.webp, d.webp which are too similar to a.webp
-      //
-      // Excludes e.webp which is too similar to b.webp
-      //
-      // Excludes f.webp which is in the ignore file
-      assert.deepEqual(images, [
-        { file: testMemes[0].id.toHex() + ".webp", width: 1, height: 2 },
-        { file: testMemes[1].id.toHex() + ".webp", width: 3, height: 4 },
+      const memes = getWindowMemes(text);
+      memes.sort((im) => im.width);
+      assert.deepEqual(memes, [
+        { id: testMemes[0].id.toHex(), width: 1, height: 2 },
+        { id: testMemes[1].id.toHex(), width: 3, height: 4 },
       ]);
     });
 
@@ -155,27 +150,21 @@ suite("/search", () => {
       const tests = [
         {
           query: "foo",
-          expectedImages: [
-            testMemes[0].id.toHex() + ".webp",
-            testMemes[1].id.toHex() + ".webp",
-          ],
+          expectedMemes: [testMemes[0].id.toHex(), testMemes[1].id.toHex()],
         },
         {
           query: "bar",
-          expectedImages: [
-            testMemes[1].id.toHex() + ".webp",
-            testMemes[0].id.toHex() + ".webp",
-          ],
+          expectedMemes: [testMemes[1].id.toHex(), testMemes[0].id.toHex()],
         },
       ];
-      for (const [i, { query, expectedImages }] of tests.entries()) {
+      for (const [i, { query, expectedMemes }] of tests.entries()) {
         test(`case ${i + 1}`, async () => {
           const res = await request(`/search?query=${query}`);
           const text = await res.text();
-          const images = getWindowImages(text);
+          const memes = getWindowMemes(text);
           assert.deepEqual(
-            images.map((im) => im.file),
-            expectedImages,
+            memes.map((im) => im.id),
+            expectedMemes,
           );
         });
       }
@@ -359,15 +348,14 @@ async function request(path, options) {
   return await fetch(`http://localhost:8081${path}`, options);
 }
 
-// TODO: rename to memes
-function getWindowImages(html) {
-  const start = "window.images = ";
+function getWindowMemes(html) {
+  const start = "window.memes = ";
   const end = ";";
   const line = html.split("\n").find((l) => l.includes(start));
   const i = line.indexOf(start) + start.length;
   const j = line.indexOf(end);
   const str = line.substring(i, j);
-  const images = JSON.parse(str);
-  assert(Array.isArray(images));
-  return images;
+  const memes = JSON.parse(str);
+  assert(Array.isArray(memes));
+  return memes;
 }

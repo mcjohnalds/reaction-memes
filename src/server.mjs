@@ -23,10 +23,10 @@ export async function createServer(
   dataDirectory = "data",
   consoleLog = console.log,
 ) {
-  const images = getImages(dataDirectory);
+  const memes = getMemes(dataDirectory);
   const server = http.createServer();
   server.on("request", (request, response) => {
-    handleRequest(request, response, dataDirectory, images, consoleLog);
+    handleRequest(request, response, dataDirectory, memes, consoleLog);
   });
   return server;
 }
@@ -35,7 +35,7 @@ async function handleRequest(
   request,
   response,
   dataDirectory,
-  images,
+  memes,
   consoleLog,
 ) {
   try {
@@ -48,7 +48,7 @@ async function handleRequest(
     ({ status, headers, body, error } = await getReply(
       request,
       dataDirectory,
-      images,
+      memes,
     ));
     if (error) {
       console.error(error);
@@ -64,16 +64,16 @@ async function handleRequest(
   }
 }
 
-async function getReply(request, dataDirectory, images) {
+async function getReply(request, dataDirectory, memes) {
   try {
     if (request.method !== "GET" && request.method !== "HEAD") {
       return get404PageReply();
     }
     const url = new URL(`https://example.com${request.url}`);
     if (url.pathname === "/") {
-      return getIndexPageReply(images);
+      return getIndexPageReply(memes);
     } else if (url.pathname === "/search") {
-      return await getSearchPageReply(url, images);
+      return await getSearchPageReply(url, memes);
     }
     return await getStaticFileReply(url, dataDirectory);
   } catch (error) {
@@ -125,11 +125,11 @@ async function getStaticFileReply(url, dataDirectory) {
   };
 }
 
-function getIndexPageReply(images) {
-  return getResultsPageReply(takeRandom(images, maxResults), "");
+function getIndexPageReply(memes) {
+  return getResultsPageReply(takeRandom(memes, maxResults), "");
 }
 
-async function getSearchPageReply(url, images) {
+async function getSearchPageReply(url, memes) {
   const query = url.searchParams.get("query");
   if (query.length > 100) {
     return {
@@ -138,20 +138,19 @@ async function getSearchPageReply(url, images) {
   }
   const textVec = await encodeText(query);
   const map = new Map();
-  for (const image of images) {
-    const similarity = dotProduct(textVec, image.embedding);
-    map.set(image, similarity);
+  for (const meme of memes) {
+    const similarity = dotProduct(textVec, meme.embedding);
+    map.set(meme, similarity);
   }
-  let results = images.slice();
+  let results = memes.slice();
   results.sort((a, b) => map.get(b) - map.get(a));
   results = results.slice(0, maxResults);
   return getResultsPageReply(results, query);
 }
 
-function getResultsPageReply(images, query) {
-  // TODO: pass ID, not file
-  const data = images.map(({ id, width, height }) => ({
-    file: id.toHex() + ".webp",
+function getResultsPageReply(memes, query) {
+  const data = memes.map(({ id, width, height }) => ({
+    id: id.toHex(),
     width,
     height,
   }));
@@ -178,7 +177,7 @@ function getResultsPageReply(images, query) {
       </x-search>
       <x-mosaic></x-mosaic>
       <script>
-        window.images = ${JSON.stringify(data)};
+        window.memes = ${JSON.stringify(data)};
       </script>
     `,
   });
@@ -230,9 +229,7 @@ function renderHTMLPage({ title, subtitle, content }) {
   `;
 }
 
-// TODO: call getImages only where needed
-function getImages(dataDirectory) {
-  // TODO: hide similar
+function getMemes(dataDirectory) {
   let memes = [];
   const sql = getSQL(dataDirectory);
   const iter = sql.iterate`
