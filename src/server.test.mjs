@@ -1,55 +1,94 @@
 import { createServer, escapeHTML, isSubarray } from "./server.mjs";
+import { getSQL } from "./sql.mjs";
 import fs from "node:fs";
 import { before, after, afterEach, test, suite, mock } from "node:test";
 import assert from "node:assert/strict";
 import { stressTest } from "./stress.mjs";
 import { encodeText } from "./clip.mjs";
+import uuidv7 from "./uuidv7.mjs";
 
 let server;
 const consoleLog = mock.fn();
+const testMemes = [
+  {
+    id: uuidv7(),
+    embedding: await encodeText("foo"),
+    width: 1,
+    height: 2,
+    naughty: false,
+  },
+  {
+    id: uuidv7(),
+    embedding: await encodeText("bar"),
+    width: 3,
+    height: 4,
+    naughty: false,
+  },
+  {
+    id: uuidv7(),
+    embedding: await encodeText("foo"),
+    width: 5,
+    height: 6,
+    naughty: false,
+  },
+  {
+    id: uuidv7(),
+    embedding: await encodeText("foo"),
+    width: 7,
+    height: 8,
+    naughty: false,
+  },
+  {
+    id: uuidv7(),
+    embedding: await encodeText("bar"),
+    width: 9,
+    height: 10,
+    naughty: false,
+  },
+  {
+    id: uuidv7(),
+    embedding: await encodeText("baz"),
+    width: 11,
+    height: 12,
+    naughty: true,
+  },
+];
+
+const testSimilarMemes = [
+  [testMemes[0].id, testMemes[2].id],
+  [testMemes[0].id, testMemes[3].id],
+  [testMemes[2].id, testMemes[3].id],
+  [testMemes[1].id, testMemes[4].id],
+];
 
 before(async () => {
   await fs.promises.rm("data-test", { recursive: true, force: true });
-  await fs.promises.mkdir("data-test/images", { recursive: true });
-  await fs.promises.mkdir("data-test/thumbnails", { recursive: true });
-  const encodings = [
-    { file: "a.webp", vector: await encodeText("foo") },
-    { file: "b.webp", vector: await encodeText("bar") },
-    { file: "c.webp", vector: await encodeText("foo") },
-    { file: "d.webp", vector: await encodeText("foo") },
-    { file: "e.webp", vector: await encodeText("bar") },
-    { file: "f.webp", vector: await encodeText("baz") },
-  ];
-  for (const encoding of encodings) {
+  await fs.promises.mkdir("data-test/memes", { recursive: true });
+  await fs.promises.mkdir("data-test/thumbnails-new", { recursive: true });
+  const sql = getSQL("data-test");
+  for (const meme of testMemes) {
+    sql.run`
+      INSERT INTO meme(id, embedding, width, height, naughty)
+      VALUES(
+        ${meme.id},
+        jsonb(${JSON.stringify(meme.embedding)}),
+        ${BigInt(meme.width)},
+        ${BigInt(meme.height)},
+        ${BigInt(meme.naughty)}
+      )
+    `;
     await fs.promises.writeFile(
-      `data-test/images/${encoding.file}`,
-      encoding.file,
+      `data-test/memes/${meme.id.toHex()}.webp`,
+      `${meme.id.toHex()} image`,
     );
     await fs.promises.writeFile(
-      `data-test/thumbnails//${encoding.file}`,
-      encoding.file,
+      `data-test/thumbnails-new/${meme.id.toHex()}.webp`,
+      `${meme.id.toHex()} thumbnail`,
     );
   }
-  const groups = [
-    ["a.webp", "c.webp", "d.webp"],
-    ["b.webp", "e.webp"],
-  ];
-  await fs.promises.writeFile(
-    "data-test/encodings.json",
-    JSON.stringify(encodings),
-  );
-  const ignore = ["f.webp"];
-  await fs.promises.writeFile("data-test/ignore.json", JSON.stringify(ignore));
-  await fs.promises.writeFile("data-test/similar.json", JSON.stringify(groups));
-  const sizes = [
-    { file: "a.webp", width: 1, height: 2 },
-    { file: "b.webp", width: 3, height: 4 },
-    { file: "c.webp", width: 5, height: 6 },
-    { file: "d.webp", width: 7, height: 8 },
-    { file: "e.webp", width: 9, height: 10 },
-    { file: "f.webp", width: 11, height: 12 },
-  ];
-  await fs.promises.writeFile("data-test/sizes.json", JSON.stringify(sizes));
+  for (const [a, b] of testSimilarMemes) {
+    sql.run`INSERT INTO similar_meme(a, b) VALUES (${a}, ${b})`;
+  }
   server = await createServer("data-test", consoleLog);
   server.listen(8081);
 });
@@ -74,12 +113,12 @@ suite("/", () => {
     assert(text.includes("<!DOCTYPE html>"));
     assert(text.includes('value=""'));
     const images = getWindowImages(text);
-    images.sort();
+    images.sort((a, b) => a.width - b.width);
     assert.equal(
-      String(images),
-      String([
-        { image: "a.webp", width: 1, height: 2 },
-        { image: "b.webp", width: 3, height: 4 },
+      JSON.stringify(images),
+      JSON.stringify([
+        { file: testMemes[0].id.toHex() + ".webp", width: 1, height: 2 },
+        { file: testMemes[1].id.toHex() + ".webp", width: 3, height: 4 },
       ]),
     );
   });
@@ -107,15 +146,27 @@ suite("/search", () => {
       //
       // Excludes f.webp which is in the ignore file
       assert.deepEqual(images, [
-        { file: "a.webp", width: 1, height: 2 },
-        { file: "b.webp", width: 3, height: 4 },
+        { file: testMemes[0].id.toHex() + ".webp", width: 1, height: 2 },
+        { file: testMemes[1].id.toHex() + ".webp", width: 3, height: 4 },
       ]);
     });
 
     suite("returns most similar match first", () => {
       const tests = [
-        { query: "foo", expectedImages: ["a.webp", "b.webp"] },
-        { query: "bar", expectedImages: ["b.webp", "a.webp"] },
+        {
+          query: "foo",
+          expectedImages: [
+            testMemes[0].id.toHex() + ".webp",
+            testMemes[1].id.toHex() + ".webp",
+          ],
+        },
+        {
+          query: "bar",
+          expectedImages: [
+            testMemes[1].id.toHex() + ".webp",
+            testMemes[0].id.toHex() + ".webp",
+          ],
+        },
       ];
       for (const [i, { query, expectedImages }] of tests.entries()) {
         test(`case ${i + 1}`, async () => {
@@ -171,16 +222,16 @@ suite("static file", () => {
         },
       },
       {
-        url: "/images/a.webp",
-        expectedFile: "data-test/images/a.webp",
+        url: `/memes/${testMemes[0].id.toHex()}.webp`,
+        expectedFile: `data-test/memes/${testMemes[0].id.toHex()}.webp`,
         expectedHeaders: {
           "Content-Type": "image/webp",
           "Cache-Control": "public, max-age=86400, immutable",
         },
       },
       {
-        url: "/thumbnails/a.webp",
-        expectedFile: "data-test/thumbnails/a.webp",
+        url: `/thumbnails-new/${testMemes[0].id.toHex()}.webp`,
+        expectedFile: `data-test/thumbnails-new/${testMemes[0].id.toHex()}.webp`,
         expectedHeaders: {
           "Content-Type": "image/webp",
           "Cache-Control": "public, max-age=86400, immutable",
@@ -308,6 +359,7 @@ async function request(path, options) {
   return await fetch(`http://localhost:8081${path}`, options);
 }
 
+// TODO: rename to memes
 function getWindowImages(html) {
   const start = "window.images = ";
   const end = ";";

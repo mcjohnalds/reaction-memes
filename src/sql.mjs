@@ -1,10 +1,11 @@
 import { DatabaseSync } from "node:sqlite";
 
-const db = new DatabaseSync("data/main.sqlite");
-const sql = db.createTagStore();
-// Hack to prevent segfault. See https://github.com/nodejs/node/pull/60462
-sql._db = db;
-db.exec(`
+export function getSQL(dataDirectory) {
+  const db = new DatabaseSync(`${dataDirectory}/main.sqlite`);
+  const sql = db.createTagStore();
+  // Hack to prevent segfault. See https://github.com/nodejs/node/pull/60462
+  sql._db = db;
+  db.exec(`
   PRAGMA journal_mode = WAL;
   PRAGMA foreign_keys = WAL;
   PRAGMA synchronous = NORMAL;
@@ -32,5 +33,5 @@ db.exec(`
   );
   COMMIT;
 `);
-
-export default sql;
+  return sql;
+}

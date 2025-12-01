@@ -1,7 +1,7 @@
 import { setTimeout } from "node:timers/promises";
 import fs from "node:fs";
 import sharp from "sharp";
-import sql from "../sql.mjs";
+import { getSQL } from "../sql.mjs";
 import { encodeImage, encodeText } from "../clip.mjs";
 import { dotProduct } from "../math.mjs";
 import uuidv7 from "../uuidv7.mjs";
@@ -9,6 +9,7 @@ import assert from "node:assert";
 
 const postsFilePath = "data/shift/reactionmemes.jsonl";
 const naughtyEmbedding = await encodeText("nigga");
+const sql = getSQL("data");
 
 async function main(dataDirectory) {
   await generateMemes(dataDirectory);
@@ -120,7 +121,8 @@ async function scrapeURL(url, dataDirectory) {
       embedding = excluded.embedding,
       width = excluded.width,
       height = excluded.height,
-      naughty = excluded.naughty
+      naughty = excluded.naughty,
+      source = excluded.source
   `;
 }
 

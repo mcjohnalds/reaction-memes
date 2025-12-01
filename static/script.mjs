@@ -46,12 +46,12 @@ class MosaicHTMLElement extends HTMLElement {
   #createItem(image) {
     const root = document.createElement("div");
     root.innerHTML = `
-      <a href="/images/${image.file}" target="_blank">
+      <a href="/memes/${image.file}" target="_blank">
         <img
           loading="lazy"
           width="${image.width}"
           height="${image.height}"
-          src="/thumbnails/${image.file}"
+          src="/thumbnails-new/${image.file}"
         />
       </a>
     `;

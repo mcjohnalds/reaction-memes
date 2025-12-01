@@ -5,6 +5,7 @@ import { Readable } from "node:stream";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { encodeText } from "./clip.mjs";
+import { getSQL } from "./sql.mjs";
 
 const maxResults = 200;
 const contentTypes = new Map([
@@ -22,7 +23,7 @@ export async function createServer(
   dataDirectory = "data",
   consoleLog = console.log,
 ) {
-  const images = await getImages(dataDirectory);
+  const images = getImages(dataDirectory);
   const server = http.createServer();
   server.on("request", (request, response) => {
     handleRequest(request, response, dataDirectory, images, consoleLog);
@@ -89,8 +90,8 @@ async function getStaticFileReply(url, dataDirectory) {
   let file;
   let cacheControl;
   if (
-    url.pathname.startsWith("/images/") ||
-    url.pathname.startsWith("/thumbnails/")
+    url.pathname.startsWith("/memes/") ||
+    url.pathname.startsWith("/thumbnails-new/")
   ) {
     file = path.join(dataDirectory, url.pathname);
     cacheControl = "public, max-age=86400, immutable";
@@ -138,7 +139,7 @@ async function getSearchPageReply(url, images) {
   const textVec = await encodeText(query);
   const map = new Map();
   for (const image of images) {
-    const similarity = dotProduct(textVec, image.vector);
+    const similarity = dotProduct(textVec, image.embedding);
     map.set(image, similarity);
   }
   let results = images.slice();
@@ -148,8 +149,9 @@ async function getSearchPageReply(url, images) {
 }
 
 function getResultsPageReply(images, query) {
-  const data = images.map(({ file, width, height }) => ({
-    file,
+  // TODO: pass ID, not file
+  const data = images.map(({ id, width, height }) => ({
+    file: id.toHex() + ".webp",
     width,
     height,
   }));
@@ -228,57 +230,30 @@ function renderHTMLPage({ title, subtitle, content }) {
   `;
 }
 
-async function getImages(dataDirectory) {
-  let encodings;
-  {
-    const encodingsFile = await fs.promises.readFile(
-      `${dataDirectory}/encodings.json`,
-      { encoding: "utf8" },
-    );
-    encodings = JSON.parse(encodingsFile);
+// TODO: call getImages only where needed
+function getImages(dataDirectory) {
+  // TODO: hide similar
+  let memes = [];
+  const sql = getSQL(dataDirectory);
+  const iter = sql.iterate`
+    SELECT
+      id,
+      json(embedding) AS embedding,
+      width,
+      height
+    FROM meme
+    WHERE NOT naughty
+    AND id NOT IN (SELECT b FROM similar_meme)
+  `;
+  for (const { id, embedding, width, height } of iter) {
+    memes.push({
+      id,
+      embedding: JSON.parse(embedding),
+      width,
+      height,
+    });
   }
-  const tooSimilar = new Set();
-  {
-    const similarFile = await fs.promises.readFile(
-      `${dataDirectory}/similar.json`,
-      { encoding: "utf8" },
-    );
-    const groups = JSON.parse(similarFile);
-    for (const group of groups) {
-      for (const image of group.slice(1)) {
-        tooSimilar.add(image);
-      }
-    }
-  }
-  let filteredEncodings;
-  {
-    const ignoreFile = await fs.promises.readFile(
-      `${dataDirectory}/ignore.json`,
-      { encoding: "utf8" },
-    );
-    const ignore = JSON.parse(ignoreFile);
-    filteredEncodings = encodings.filter(
-      (encoding) =>
-        !tooSimilar.has(encoding.file) && !ignore.includes(encoding.file),
-    );
-    assert(encodings.length > filteredEncodings.length);
-  }
-  const sizesFile = await fs.promises.readFile(`${dataDirectory}/sizes.json`, {
-    encoding: "utf8",
-  });
-  const sizesMap = new Map();
-  {
-    const sizes = JSON.parse(sizesFile);
-    for (const { file, width, height } of sizes) {
-      sizesMap.set(file, { width, height });
-    }
-  }
-  const images = [];
-  for (const encoding of filteredEncodings) {
-    const { width, height } = sizesMap.get(encoding.file);
-    images.push({ ...encoding, width, height });
-  }
-  return images;
+  return memes;
 }
 
 function logRequest(request, status, duration, consoleLog) {
