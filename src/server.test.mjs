@@ -90,7 +90,7 @@ before(async () => {
     sql.run`INSERT INTO similar_meme(a, b) VALUES (${a}, ${b})`;
   }
   server = await createServer("data-test", consoleLog);
-  server.listen(8081);
+  await new Promise((r) => server.listen(8081, r));
 });
 
 after(async () => {
