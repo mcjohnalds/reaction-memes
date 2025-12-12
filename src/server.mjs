@@ -126,7 +126,8 @@ async function getStaticFileReply(url, dataDirectory) {
 }
 
 function getIndexPageReply(memes) {
-  return getResultsPageReply(takeRandom(memes, maxResults), "");
+  const results = memes.filter((m) => !m.naughty);
+  return getResultsPageReply(takeRandom(results, maxResults), "");
 }
 
 async function getSearchPageReply(url, memes) {
@@ -143,6 +144,9 @@ async function getSearchPageReply(url, memes) {
     map.set(meme, similarity);
   }
   let results = memes.slice();
+  if (!query.toLocaleLowerCase().match(/\bnig/)) {
+    results = results.filter((m) => !m.naughty);
+  }
   results.sort((a, b) => map.get(b) - map.get(a));
   results = results.slice(0, maxResults);
   return getResultsPageReply(results, query);
@@ -237,17 +241,18 @@ function getMemes(dataDirectory) {
       id,
       json(embedding) AS embedding,
       width,
-      height
+      height,
+      naughty
     FROM meme
-    WHERE NOT naughty
-    AND id NOT IN (SELECT b FROM similar_meme)
+    WHERE id NOT IN (SELECT b FROM similar_meme)
   `;
-  for (const { id, embedding, width, height } of iter) {
+  for (const { id, embedding, width, height, naughty } of iter) {
     memes.push({
       id,
       embedding: JSON.parse(embedding),
       width,
       height,
+      naughty,
     });
   }
   return memes;

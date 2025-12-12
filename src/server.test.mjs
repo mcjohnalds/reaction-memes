@@ -170,6 +170,30 @@ suite("/search", () => {
       }
     });
 
+    suite("conditionally includes naughty words", () => {
+      const tests = [
+        { query: "foo", includesNaughty: false },
+        { query: "fnig", includesNaughty: false },
+        { query: "fNig", includesNaughty: false },
+        { query: "Ni", includesNaughty: false },
+        { query: "foo nig", includesNaughty: true },
+        { query: "nigger", includesNaughty: true },
+        { query: "nig", includesNaughty: true },
+        { query: "Nig", includesNaughty: true },
+        { query: "foo nig", includesNaughty: true },
+        { query: "foo Nig", includesNaughty: true },
+      ];
+      for (const [i, { query, includesNaughty }] of tests.entries()) {
+        test(`case ${i + 1}`, async () => {
+          const res = await request(`/search?query=${query}`);
+          const text = await res.text();
+          const memes = getWindowMemes(text).map((m) => m.id);
+          const naughty = testMemes[5].id.toHex();
+          assert.equal(memes.includes(naughty), includesNaughty);
+        });
+      }
+    });
+
     test("returns error on large query", async () => {
       const query = "a".repeat(200);
       const res = await request(`/search?query=${query}`);

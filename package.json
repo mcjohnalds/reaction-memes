@@ -8,7 +8,8 @@
   "type": "module",
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning",
-    "test": "node --disable-warning=ExperimentalWarning --test"
+    "test": "node --disable-warning=ExperimentalWarning --test",
+    "format": "prettier --write src"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.7.6",
