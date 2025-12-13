@@ -46,7 +46,7 @@ class MosaicHTMLElement extends HTMLElement {
   #createItem(meme) {
     const root = document.createElement("div");
     root.innerHTML = `
-      <a href="/memes/${meme.id}.webp" target="_blank">
+      <a href="/memes/${meme.id}.webp">
         <img
           loading="lazy"
           width="${meme.width}"
