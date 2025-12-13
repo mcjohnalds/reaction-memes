@@ -3,6 +3,7 @@ html {
   --secondary: oklch(0.8774 0.1459 335.6);
   --tertiary: oklch(0.8774 0.1459 187.78);
   --background: #222;
+  --panel: #333;
   --foreground: #eee;
   --placeholder: #aaa;
   margin: 0;
@@ -147,5 +148,6 @@ x-mosaic {
     /* Need height: auto so element has correct size before resource has loaded */
     height: auto;
     cursor: pointer;
+    background: var(--panel);
   }
 }

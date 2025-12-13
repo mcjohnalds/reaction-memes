@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning",
     "test": "node --disable-warning=ExperimentalWarning --test",
-    "format": "prettier --write src"
+    "format": "prettier --write src static"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.7.6",
