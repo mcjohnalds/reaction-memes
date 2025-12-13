@@ -164,7 +164,7 @@ function getResultsPageReply(memes, query) {
     content: `
       <x-search>
         <form method="get" action="/search">
-          <div>
+          <label>
             <!-- Material UI search icon -->
             <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
             <input
@@ -175,7 +175,7 @@ function getResultsPageReply(memes, query) {
               value="${escapeHTML(query)}"
               required
             />
-          </div>
+          </label>
           <button type="submit" tabindex="0">Search</button>
         </form>
       </x-search>
@@ -214,6 +214,7 @@ function renderHTMLPage({ title, subtitle, content }) {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="${subtitle}">
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -223,7 +224,7 @@ function renderHTMLPage({ title, subtitle, content }) {
       </head>
       <body>
         <a href="/" class="title" >
-          <img src="/title.svg" />
+          <img src="/title.svg" alt="Reaction Memes" />
         </a>
         <div class="subtitle">${subtitle}</div>
         ${content}

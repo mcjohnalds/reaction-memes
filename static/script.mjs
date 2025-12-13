@@ -4,14 +4,9 @@ class SearchHTMLElement extends HTMLElement {
   }
 
   connectedCallback() {
-    // Need this event handler so the user can click on the magnifying glass
-    // icon
-    this.addEventListener("click", () => {
-      this.#input.focus();
-    });
     // When switching to a tab, Safari scrolls to the focused input. So if the
-    // user scrolls halfway down the page, then they go to a different tab, then
-    // they come back, they will be at the top of the page. Not good.
+    // user scrolls halfway down the page, then they go to a different tab,
+    // then they come back, they will be at the top of the page. Not good.
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "hidden") {
         this.#input.blur();
@@ -52,6 +47,7 @@ class MosaicHTMLElement extends HTMLElement {
           width="${meme.width}"
           height="${meme.height}"
           src="/thumbnails/${meme.id}.webp"
+          alt="meme"
         />
       </a>
     `;
