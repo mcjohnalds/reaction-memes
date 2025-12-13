@@ -8,6 +8,7 @@
   "type": "module",
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning",
+    "start:watch": "node --disable-warning=ExperimentalWarning --watch --watch-preserve-output",
     "test": "node --disable-warning=ExperimentalWarning --test",
     "format": "prettier --write src static"
   },
