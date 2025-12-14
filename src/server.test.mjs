@@ -391,15 +391,15 @@ test("logs requests", async () => {
   assert.equal(consoleLog.mock.callCount(), 1);
   const args = consoleLog.mock.calls[0].arguments;
   const json = JSON.parse(args[0]);
+  assert.equal(json.time, new Date(json.time).toISOString());
   assert.equal(json.status, 200);
   assert.equal(json.method, "GET");
-  assert.equal(json.url, "/script.mjs");
+  assert.equal(json.path, "/script.mjs");
   assert(typeof json.duration === "number");
   assert.equal(
-    json.agent,
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0.1 Safari/605.1.15",
+    json.headers.referer,
+    "https://reactionmemes.app/",
   );
-  assert.equal(new Date(json.time).toISOString(), json.time);
 });
 
 test("escapeHTML()", () => {

@@ -3,7 +3,7 @@ import { dotProduct } from "./math.mjs";
 import assert from "node:assert";
 import { Readable } from "node:stream";
 import * as fs from "node:fs";
-import * as path from "node:path";
+import { extname } from "node:path";
 import { encodeText } from "./clip.mjs";
 import { getSQL } from "./sql.mjs";
 
@@ -94,10 +94,10 @@ async function getStaticFileReply(url, dataDirectory) {
     url.pathname.startsWith("/memes/") ||
     url.pathname.startsWith("/thumbnails/")
   ) {
-    file = path.join(dataDirectory, url.pathname);
+    file = dataDirectory + url.pathname;
     cacheControl = "public, max-age=86400, immutable";
   } else {
-    file = path.join("static", url.pathname);
+    file = "static" + url.pathname;
     if (url.pathname.endsWith(".svg")) {
       cacheControl = "public, max-age=86400, immutable";
     } else {
@@ -109,8 +109,7 @@ async function getStaticFileReply(url, dataDirectory) {
   } catch (error) {
     return get404PageReply(url);
   }
-  const ext = path.extname(file);
-  const contentType = contentTypes.get(ext);
+  const contentType = contentTypes.get(extname(file));
   if (!contentType) {
     return get404PageReply(url);
   }
@@ -273,16 +272,12 @@ function getMemes(dataDirectory) {
 
 function logRequest(request, status, duration, consoleLog) {
   const log = {
+    time: new Date().toISOString(),
     status,
     method: request.method,
-    url: request.url,
-    ip: request.headers["cf-connecting-ip"],
-    country: request.headers["cf-ipcountry"],
+    path: request.url,
     duration: Math.round(duration),
-    agent: request.headers["user-agent"],
-    referer: request.headers["referer"],
     headers: request.headers,
-    time: new Date().toISOString(),
   };
   consoleLog(JSON.stringify(log));
 }
