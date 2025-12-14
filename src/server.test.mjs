@@ -356,7 +356,7 @@ suite("OpenGraph tags", () => {
     );
     assert(
       text.includes(
-        '<meta property="og:image" content="https://reactionmemes.app/speb.svg" />',
+        '<meta property="og:image" content="https://reactionmemes.app/grepe.svg" />',
       ),
     );
   });
@@ -376,7 +376,7 @@ suite("OpenGraph tags", () => {
     );
     assert(
       text.includes(
-        '<meta property="og:image" content="http://localhost:8081/speb.svg" />',
+        '<meta property="og:image" content="http://localhost:8081/grepe.svg" />',
       ),
     );
   });
@@ -396,10 +396,7 @@ test("logs requests", async () => {
   assert.equal(json.method, "GET");
   assert.equal(json.path, "/script.mjs");
   assert(typeof json.duration === "number");
-  assert.equal(
-    json.headers.referer,
-    "https://reactionmemes.app/",
-  );
+  assert.equal(json.headers.referer, "https://reactionmemes.app/");
 });
 
 test("escapeHTML()", () => {

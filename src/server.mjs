@@ -220,7 +220,7 @@ function renderHTMLPage({ url, title, subtitle, content }) {
         <meta property="og:description" content="${subtitle}">
         <meta property="og:type" content="website" />
         <meta property="og:url" content="${url}" />
-        <meta property="og:image" content="${url.origin}/speb.svg" />
+        <meta property="og:image" content="${url.origin}/grepe.svg" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -236,7 +236,7 @@ function renderHTMLPage({ url, title, subtitle, content }) {
             </a>
             <div class="subtitle">${subtitle}</div>
           </div>
-          <img width="581" height="796" class="right" src="/speb.svg" alt="Speb" />
+          <img width="581" height="796" class="right" src="/grepe.svg" alt="Grepe" />
         </div>
         ${content}
         <script src="/script.mjs" type="module"></script>
