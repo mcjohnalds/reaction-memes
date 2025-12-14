@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { stressTest } from "./stress.mjs";
 import { encodeText } from "./clip.mjs";
 import uuidv7 from "./uuidv7.mjs";
+import http from "node:http";
 
 let server;
 const consoleLog = mock.fn();
@@ -106,10 +107,10 @@ afterEach(async () => {
 
 suite("/", () => {
   test("GET", async () => {
-    const res = await request("");
-    assert.equal(res.status, 200);
-    assert.equal(res.headers.get("Content-Type"), "text/html");
-    const text = await res.text();
+    const res = await sendRequest({ method: "GET", path: "/" });
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.headers["content-type"], "text/html");
+    const text = res.body.toString("utf8");
     assert(text.includes("<!DOCTYPE html>"));
     assert(text.includes('value=""'));
     const memes = getWindowMemes(text);
@@ -124,18 +125,21 @@ suite("/", () => {
   });
 
   test("HEAD", async () => {
-    const res = await request("", { method: "HEAD" });
-    assert.equal(res.status, 200);
+    const res = await sendRequest({ method: "HEAD", path: "/" });
+    assert.equal(res.statusCode, 200);
   });
 });
 
 suite("/search", () => {
   suite("GET", () => {
     test("valid input returns valid response", async () => {
-      const res = await request("/search?query=foo");
-      assert.equal(res.status, 200);
-      assert.equal(res.headers.get("Content-Type"), "text/html");
-      const text = await res.text();
+      const res = await sendRequest({
+        method: "GET",
+        path: "/search?query=foo",
+      });
+      assert.equal(res.statusCode, 200);
+      assert.equal(res.headers["content-type"], "text/html");
+      const text = res.body.toString("utf8");
       assert(text.includes("<!DOCTYPE html>"));
       assert(text.includes('value="foo"'));
       const memes = getWindowMemes(text);
@@ -159,8 +163,11 @@ suite("/search", () => {
       ];
       for (const [i, { query, expectedMemes }] of tests.entries()) {
         test(`case ${i + 1}`, async () => {
-          const res = await request(`/search?query=${query}`);
-          const text = await res.text();
+          const res = await sendRequest({
+            method: "GET",
+            path: `/search?query=${query}`,
+          });
+          const text = res.body.toString("utf8");
           const memes = getWindowMemes(text);
           assert.deepEqual(
             memes.map((im) => im.id),
@@ -185,8 +192,11 @@ suite("/search", () => {
       ];
       for (const [i, { query, includesNaughty }] of tests.entries()) {
         test(`case ${i + 1}`, async () => {
-          const res = await request(`/search?query=${query}`);
-          const text = await res.text();
+          const res = await sendRequest({
+            method: "GET",
+            path: `/search?query=${query}`,
+          });
+          const text = res.body.toString("utf8");
           const memes = getWindowMemes(text).map((m) => m.id);
           const naughty = testMemes[5].id.toHex();
           assert.equal(memes.includes(naughty), includesNaughty);
@@ -196,14 +206,17 @@ suite("/search", () => {
 
     test("returns error on large query", async () => {
       const query = "a".repeat(200);
-      const res = await request(`/search?query=${query}`);
-      assert.equal(res.status, 400);
+      const res = await sendRequest({
+        method: "GET",
+        path: `/search?query=${query}`,
+      });
+      assert.equal(res.statusCode, 400);
     });
   });
 
   test("HEAD", async () => {
-    const res = await request("/search?query=a", { method: "HEAD" });
-    assert.equal(res.status, 200);
+    const res = await sendRequest({ method: "HEAD", path: "/search?query=a" });
+    assert.equal(res.statusCode, 200);
   });
 });
 
@@ -211,56 +224,56 @@ suite("static file", () => {
   suite("valid request", () => {
     const tests = [
       {
-        url: "/script.mjs",
+        path: "/script.mjs",
         expectedFile: "static/script.mjs",
         expectedHeaders: {
-          "Content-Type": "text/javascript",
-          "Cache-Control": "no-cache",
+          "content-type": "text/javascript",
+          "cache-control": "no-cache",
         },
       },
       {
-        url: "/style.css",
+        path: "/style.css",
         expectedFile: "static/style.css",
         expectedHeaders: {
-          "Content-Type": "text/css",
-          "Cache-Control": "no-cache",
+          "content-type": "text/css",
+          "cache-control": "no-cache",
         },
       },
       {
-        url: "/title.svg",
+        path: "/title.svg",
         expectedFile: "static/title.svg",
         expectedHeaders: {
-          "Content-Type": "image/svg+xml",
-          "Cache-Control": "public, max-age=86400, immutable",
+          "content-type": "image/svg+xml",
+          "cache-control": "public, max-age=86400, immutable",
         },
       },
       {
-        url: `/memes/${testMemes[0].id.toHex()}.webp`,
+        path: `/memes/${testMemes[0].id.toHex()}.webp`,
         expectedFile: `data-test/memes/${testMemes[0].id.toHex()}.webp`,
         expectedHeaders: {
-          "Content-Type": "image/webp",
-          "Cache-Control": "public, max-age=86400, immutable",
+          "content-type": "image/webp",
+          "cache-control": "public, max-age=86400, immutable",
         },
       },
       {
-        url: `/thumbnails/${testMemes[0].id.toHex()}.webp`,
+        path: `/thumbnails/${testMemes[0].id.toHex()}.webp`,
         expectedFile: `data-test/thumbnails/${testMemes[0].id.toHex()}.webp`,
         expectedHeaders: {
-          "Content-Type": "image/webp",
-          "Cache-Control": "public, max-age=86400, immutable",
+          "content-type": "image/webp",
+          "cache-control": "public, max-age=86400, immutable",
         },
       },
     ];
 
-    for (const { url, expectedFile, expectedHeaders } of tests) {
-      suite(url, () => {
+    for (const { path, expectedFile, expectedHeaders } of tests) {
+      suite(path, () => {
         test("GET", async () => {
-          const res = await request(url);
-          assert.equal(res.status, 200);
+          const res = await sendRequest({ method: "GET", path });
+          assert.equal(res.statusCode, 200);
           for (const [k, v] of Object.entries(expectedHeaders)) {
-            assert.equal(res.headers.get(k), v);
+            assert.equal(res.headers[k], v);
           }
-          const text = await res.text();
+          const text = res.body.toString("utf8");
           const file = await fs.promises.readFile(expectedFile, {
             encoding: "utf8",
           });
@@ -268,17 +281,17 @@ suite("static file", () => {
         });
 
         test("HEAD", async () => {
-          const res = await request(url, { method: "HEAD" });
-          assert.equal(res.status, 200);
+          const res = await sendRequest({ method: "HEAD", path });
+          assert.equal(res.statusCode, 200);
         });
       });
     }
   });
 
   test("resource does not exist", async () => {
-    const res = await request("/does-not-exist");
-    assert.equal(res.status, 404);
-    const text = await res.text();
+    const res = await sendRequest({ method: "GET", path: "/does-not-exist" });
+    assert.equal(res.statusCode, 404);
+    const text = res.body.toString("utf8");
     assert(text.includes("<title>Page not found | Reaction Memes</title>"));
   });
 
@@ -289,33 +302,73 @@ suite("static file", () => {
 
     test("GET", async () => {
       await fs.promises.writeFile("static/unsupported.txt", "hello");
-      const res = await request("/unsupported.txt");
-      assert.equal(res.status, 404);
+      const res = await sendRequest({
+        method: "GET",
+        path: "/unsupported.txt",
+      });
+      assert.equal(res.statusCode, 404);
     });
 
     test("HEAD", async () => {
-      const res = await request("/unsupported.mjs", { method: "HEAD" });
-      assert.equal(res.status, 404);
+      const res = await sendRequest({
+        method: "HEAD",
+        path: "/unsupported.mjs",
+      });
+      assert.equal(res.statusCode, 404);
     });
   });
 
   test("path contains ..", async () => {
-    const res = await request("/../static/script.mjs");
-    assert.equal(res.status, 404);
+    const res = await sendRequest({
+      method: "GET",
+      path: "/../static/script.mjs",
+    });
+    assert.equal(res.statusCode, 404);
   });
 });
 
 suite("/../static/script.mjs", () => {
   test("GET", async () => {
-    // This test passes because of undocumented behavior built-in to Node.js
-    // where it sanitizes req.url
-    const res = await request("/../static/script.mjs");
-    assert.equal(res.status, 404);
+    const res = await sendRequest({
+      method: "GET",
+      path: "/../static/script.mjs",
+    });
+    assert.equal(res.statusCode, 404);
   });
 
   test("HEAD", async () => {
-    const res = await request("/../static/script.mjs", { method: "HEAD" });
-    assert.equal(res.status, 404);
+    const res = await sendRequest({
+      method: "HEAD",
+      path: "/../static/script.mjs",
+    });
+    assert.equal(res.statusCode, 404);
+  });
+});
+
+suite("OpenGraph tags", () => {
+  test("Request from cloudflare", async () => {
+    const res = await sendRequest({ method: "GET", path: "/search?query=foo" });
+    const text = res.body.toString("utf8");
+    assert(
+      text.includes(
+        '<meta property="og:url" content="https://reactionmemes.app/search?query=foo" />',
+      ),
+    );
+  });
+
+  test("Request from localhost", async () => {
+    const res = await sendRequest({
+      forwardedProto: "http",
+      host: "localhost:8081",
+      method: "GET",
+      path: "/search?query=foo",
+    });
+    const text = res.body.toString("utf8");
+    assert(
+      text.includes(
+        '<meta property="og:url" content="http://localhost:8081/search?query=foo" />',
+      ),
+    );
   });
 });
 
@@ -323,7 +376,7 @@ test("logs requests", async () => {
   const promise = new Promise((resolve) =>
     consoleLog.mock.mockImplementation(resolve),
   );
-  await request("/script.mjs");
+  await sendRequest({ method: "GET", path: "/script.mjs" });
   await promise;
   assert.equal(consoleLog.mock.callCount(), 1);
   const args = consoleLog.mock.calls[0].arguments;
@@ -332,7 +385,10 @@ test("logs requests", async () => {
   assert.equal(json.method, "GET");
   assert.equal(json.url, "/script.mjs");
   assert(typeof json.duration === "number");
-  assert.equal(json.agent, "node");
+  assert.equal(
+    json.agent,
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0.1 Safari/605.1.15",
+  );
   assert.equal(new Date(json.time).toISOString(), json.time);
 });
 
@@ -368,8 +424,55 @@ test("stress test", async () => {
   });
 });
 
-async function request(path, options) {
-  return await fetch(`http://localhost:8081${path}`, options);
+function sendRequest({
+  forwardedProto = "https",
+  host = "reactionmemes.app",
+  method,
+  path,
+}) {
+  const req = http.request({
+    method,
+    path: encodeURI(path),
+    headers: {
+      host,
+      "user-agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0.1 Safari/605.1.15",
+      "accept-language": "en-US,en;q=0.9",
+      "cdn-loop": "cloudflare; loops=1; subreqs=1",
+      "cf-connecting-ip": "1.2.3.4",
+      "cf-ew-via": "15",
+      "cf-ipcountry": "US",
+      "cf-ray": "aaaaaaaaaaaaaaaa-NYC",
+      "cf-visitor": `{"scheme":"${forwardedProto}"}`,
+      "cf-warp-tag-id": "dad28a6f-5791-4c52-9c86-e4b3a62d1485",
+      connection: "keep-alive",
+      priority: "u=5, i",
+      referer: `https://${host}/`,
+      "sec-fetch-mode": "no-cors",
+      "sec-fetch-site": "same-origin",
+      "x-forwarded-for": "1.2.3.4",
+      "x-forwarded-proto": forwardedProto,
+    },
+    host: "localhost",
+    port: 8081,
+  });
+  return new Promise((resolve, reject) => {
+    req.on("response", (response) => {
+      let body = new Buffer.alloc(0);
+      response.on("data", (data) => {
+        body = Buffer.concat([body, data]);
+      });
+      response.on("end", () => {
+        resolve({
+          statusCode: response.statusCode,
+          headers: response.headers,
+          body,
+        });
+      });
+    });
+    req.on("error", reject);
+    req.end();
+  });
 }
 
 function getWindowMemes(html) {

@@ -66,12 +66,13 @@ async function handleRequest(
 
 async function getReply(request, dataDirectory, memes) {
   try {
+    const protocol = request.headers["x-forwarded-proto"] ?? "http";
+    const url = new URL(`${protocol}://${request.headers.host}${request.url}`);
     if (request.method !== "GET" && request.method !== "HEAD") {
-      return get404PageReply();
+      return get404PageReply(url);
     }
-    const url = new URL(`https://example.com${request.url}`);
     if (url.pathname === "/") {
-      return getIndexPageReply(memes);
+      return getIndexPageReply(url, memes);
     } else if (url.pathname === "/search") {
       return await getSearchPageReply(url, memes);
     }
@@ -85,7 +86,7 @@ async function getStaticFileReply(url, dataDirectory) {
   if (url.pathname.includes("..")) {
     // This is probably redundant but worth it just in case there is a bug in
     // the logic
-    return get404PageReply();
+    return get404PageReply(url);
   }
   let file;
   let cacheControl;
@@ -107,12 +108,12 @@ async function getStaticFileReply(url, dataDirectory) {
   try {
     await fs.promises.access(file);
   } catch (error) {
-    return get404PageReply();
+    return get404PageReply(url);
   }
   const ext = path.extname(file);
   const contentType = contentTypes.get(ext);
   if (!contentType) {
-    return get404PageReply();
+    return get404PageReply(url);
   }
   const stream = fs.createReadStream(file);
   return {
@@ -125,9 +126,9 @@ async function getStaticFileReply(url, dataDirectory) {
   };
 }
 
-function getIndexPageReply(memes) {
+function getIndexPageReply(url, memes) {
   const results = memes.filter((m) => !m.naughty);
-  return getResultsPageReply(takeRandom(results, maxResults), "");
+  return getResultsPageReply(url, takeRandom(results, maxResults), "");
 }
 
 async function getSearchPageReply(url, memes) {
@@ -149,16 +150,17 @@ async function getSearchPageReply(url, memes) {
   }
   results.sort((a, b) => map.get(b) - map.get(a));
   results = results.slice(0, maxResults);
-  return getResultsPageReply(results, query);
+  return getResultsPageReply(url, results, query);
 }
 
-function getResultsPageReply(memes, query) {
+function getResultsPageReply(url, memes, query) {
   const data = memes.map(({ id, width, height }) => ({
     id: id.toHex(),
     width,
     height,
   }));
   const html = renderHTMLPage({
+    url,
     title: "Reaction memes",
     subtitle: "Find the perfect meme",
     content: `
@@ -193,8 +195,9 @@ function getResultsPageReply(memes, query) {
   };
 }
 
-function get404PageReply() {
+function get404PageReply(url) {
   const html = renderHTMLPage({
+    url,
     title: "Page not found | Reaction Memes",
     subtitle: "Page not found",
     content: "",
@@ -207,7 +210,7 @@ function get404PageReply() {
   };
 }
 
-function renderHTMLPage({ title, subtitle, content }) {
+function renderHTMLPage({ url, title, subtitle, content }) {
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -215,6 +218,9 @@ function renderHTMLPage({ title, subtitle, content }) {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="description" content="${subtitle}">
+        <meta property="og:title" content="${title}" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="${url}" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -269,6 +275,7 @@ function logRequest(request, status, duration, consoleLog) {
     duration: Math.round(duration),
     agent: request.headers["user-agent"],
     referer: request.headers["referer"],
+    headers: request.headers,
     time: new Date().toISOString(),
   };
   consoleLog(JSON.stringify(log));
