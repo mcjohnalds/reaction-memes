@@ -354,6 +354,11 @@ suite("OpenGraph tags", () => {
         '<meta property="og:url" content="https://reactionmemes.app/search?query=foo" />',
       ),
     );
+    assert(
+      text.includes(
+        '<meta property="og:image" content="https://reactionmemes.app/speb.svg" />',
+      ),
+    );
   });
 
   test("Request from localhost", async () => {
@@ -367,6 +372,11 @@ suite("OpenGraph tags", () => {
     assert(
       text.includes(
         '<meta property="og:url" content="http://localhost:8081/search?query=foo" />',
+      ),
+    );
+    assert(
+      text.includes(
+        '<meta property="og:image" content="http://localhost:8081/speb.svg" />',
       ),
     );
   });

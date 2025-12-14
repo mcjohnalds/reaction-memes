@@ -25,30 +25,70 @@ body {
   display: flex;
   flex-direction: column;
   padding: 0;
-  gap: 16px;
   width: 100%;
   max-width: 1200px;
+  gap: 8px;
+  margin: 0;
 
-  .title {
-    align-self: start;
-    display: flex;
-
-    img {
-      cursor: pointer;
-      max-width: 100%;
-    }
+  @media only screen and (min-width: 700px) {
+    gap: 16px;
   }
 
-  .subtitle {
-    margin: 0;
-    font-weight: 200;
-    align-self: start;
-    font-size: 20px;
-    letter-spacing: 0.1px;
+  & > .header {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
 
-    @media only screen and (min-width: 700px) {
-      font-size: 24px;
-      letter-spacing: 0.2px;
+    & > .left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+
+      @media only screen and (min-width: 700px) {
+        gap: 12px;
+        font-size: 24px;
+        letter-spacing: 0.2px;
+      }
+
+      .title {
+        display: flex;
+        justify-content: space-between;
+        align-self: stretch;
+        width: auto;
+        max-width: 100%;
+
+        img {
+          margin-top: -4px;
+          cursor: pointer;
+          height: 50px;
+          width: auto;
+          max-width: 100%;
+        }
+      }
+
+      .subtitle {
+        margin: 0;
+        font-weight: 200;
+        align-self: start;
+        font-size: 20px;
+        letter-spacing: 0.1px;
+
+        @media only screen and (min-width: 700px) {
+          font-size: 24px;
+          letter-spacing: 0.2px;
+        }
+      }
+    }
+
+    & > .right {
+      height: 70px;
+      transform: scaleX(-1);
+
+      @media only screen and (min-width: 700px) {
+        height: 90px;
+        gap: 16px;
+      }
     }
   }
 }
