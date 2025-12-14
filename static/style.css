@@ -82,10 +82,13 @@ body {
     }
 
     & > .right {
+      width: 51px;
       height: 70px;
       transform: scaleX(-1);
+      object-fit: contain;
 
       @media only screen and (min-width: 700px) {
+        width: 66px;
         height: 90px;
         gap: 16px;
       }

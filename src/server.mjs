@@ -98,8 +98,7 @@ async function getStaticFileReply(url, dataDirectory) {
     cacheControl = "public, max-age=86400, immutable";
   } else {
     file = path.join("static", url.pathname);
-    if (url.pathname === "/title.svg") {
-      // TODO: increase max age once we have hashes
+    if (url.pathname.endsWith(".svg")) {
       cacheControl = "public, max-age=86400, immutable";
     } else {
       cacheControl = "no-cache";
@@ -238,7 +237,7 @@ function renderHTMLPage({ url, title, subtitle, content }) {
             </a>
             <div class="subtitle">${subtitle}</div>
           </div>
-          <img class="right" src="/speb.svg" alt="Speb" />
+          <img width="581" height="796" class="right" src="/speb.svg" alt="Speb" />
         </div>
         ${content}
         <script src="/script.mjs" type="module"></script>
