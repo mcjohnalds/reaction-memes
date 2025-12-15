@@ -65,9 +65,9 @@ async function generateMemeSimilarities() {
       const similarity = dotProduct(aEmbedding, JSON.parse(b.embedding));
       if (similarity > 0.97) {
         sql.run`
-        INSERT INTO similar_meme(a, b)
-        VALUES(${a.id}, ${b.id})
-      `;
+          INSERT INTO similar_meme(a, b)
+          VALUES(${a.id}, ${b.id})
+        `;
       }
     }
   }
