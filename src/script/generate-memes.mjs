@@ -54,13 +54,15 @@ async function generateMemes(dataDirectory) {
 }
 
 async function generateMemeSimilarities() {
+  sql.run`DELETE FROM similar_meme`;
   let n = 1;
   const as = sql.iterate`SELECT id, json(embedding) AS embedding FROM meme`;
   for (const a of as) {
     const aEmbedding = JSON.parse(a.embedding);
     console.log(`Similarity ${n++}`);
-    sql.run`DELETE FROM similar_meme WHERE a = ${a.id} OR b = ${a.id}`;
-    const bs = sql.iterate`SELECT id, json(embedding) AS embedding FROM meme WHERE id > ${a.id}`;
+    const bs = sql.iterate`
+      SELECT id, json(embedding) AS embedding FROM meme WHERE id > ${a.id}
+    `;
     for (const b of bs) {
       const similarity = dotProduct(aEmbedding, JSON.parse(b.embedding));
       if (similarity > 0.97) {
