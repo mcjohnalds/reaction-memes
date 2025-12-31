@@ -1,5 +1,5 @@
 #!/bin/bash
-ssh reaction-memes@lmain bash -s <<EOF
+ssh reaction-memes@lmain bash -ls <<EOF
 set -ex
 cd ~/reaction-memes
 git pull

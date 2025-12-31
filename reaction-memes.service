@@ -2,7 +2,7 @@
 Description=reactionmemes.app website
 
 [Service]
-ExecStart=%h/.local/bin/npm start bin/server.mjs
+ExecStart=/bin/sh -xlc 'npm start bin/server.mjs'
 WorkingDirectory=%h/reaction-memes/
 Restart=always
 Environment="PORT=8082"
