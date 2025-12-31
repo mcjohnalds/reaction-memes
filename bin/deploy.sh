@@ -4,7 +4,8 @@ set -ex
 cd ~/reaction-memes
 git pull
 npm install
-systemctl restart --user reaction-memes
+systemctl --user daemon-reload
+systemctl --user restart reaction-memes
 sleep 3
 curl -sf -o /dev/null http://localhost:8082
 EOF
