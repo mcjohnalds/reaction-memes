@@ -1,0 +1,148 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Parameters:
+  Ami:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64
+    Description: Latest Amazon Linux 2023 arm64 AMI
+  CertificateArn:
+    Type: String
+    Description: ARN of the us-east-1 ACM cert for reactionmemes.app.
+  OriginDomainName:
+    Type: String
+    Default: none.invalid
+    Description: Public DNS of the EC2 origin.
+
+Resources:
+  EcrRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: reaction-memes
+      EmptyOnDelete: true
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {
+            "rules": [
+              {
+                "rulePriority": 1,
+                "description": "Keep last 5 images",
+                "selection": {
+                  "tagStatus": "any",
+                  "countType": "imageCountMoreThan",
+                  "countNumber": 5
+                },
+                "action": { "type": "expire" }
+              }
+            ]
+          }
+
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref Role
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: reaction-memes http
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          # CloudFront origin-facing managed prefix list for ap-southeast-2.
+          SourcePrefixListId: pl-b8a742d1
+
+  Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t4g.small
+      ImageId: !Ref Ami
+      IamInstanceProfile: !Ref InstanceProfile
+      SecurityGroupIds:
+        - !Ref SecurityGroup
+      Tags:
+        - Key: Name
+          Value: reaction-memes
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          set -x
+          dnf install -y docker || exit 1
+          systemctl enable --now docker || exit 1
+
+  CachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub "${AWS::StackName}-cache"
+        # Origin sets Cache-Control per response, so honor it: cache immutable
+        # assets, revalidate no-cache ones.
+        MinTTL: 0
+        DefaultTTL: 0
+        MaxTTL: 31536000
+        ParametersInCacheKeyAndForwardedToOrigin:
+          EnableAcceptEncodingGzip: true
+          EnableAcceptEncodingBrotli: true
+          CookiesConfig:
+            CookieBehavior: none
+          # Forward Host so the app builds correct canonical/og URLs.
+          HeadersConfig:
+            HeaderBehavior: whitelist
+            Headers:
+              - Host
+          # /search reads ?query=, so query strings must reach the origin.
+          QueryStringsConfig:
+            QueryStringBehavior: all
+
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        Aliases:
+          - reactionmemes.app
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CertificateArn
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
+        Origins:
+          - Id: ec2
+            DomainName: !Ref OriginDomainName
+            CustomOriginConfig:
+              OriginProtocolPolicy: http-only
+              HTTPPort: 80
+            OriginCustomHeaders:
+              - HeaderName: X-Forwarded-Proto
+                HeaderValue: https
+        DefaultCacheBehavior:
+          TargetOriginId: ec2
+          ViewerProtocolPolicy: redirect-to-https
+          Compress: true
+          AllowedMethods: [GET, HEAD]
+          CachePolicyId: !Ref CachePolicy
+
+Outputs:
+  InstanceId:
+    Value: !Ref Instance
+  EcrRepositoryUri:
+    Value: !GetAtt EcrRepository.RepositoryUri
+  DistributionDomainName:
+    Description: Point reactionmemes.app at this with a Cloudflare CNAME.
+    Value: !GetAtt Distribution.DomainName

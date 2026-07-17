@@ -1,4 +1,3 @@
 #!/bin/sh
-ssh reaction-memes@hmain \
-  "journalctl -u reaction-memes.service -rq -o short-iso -n 100 -g error" \
-  | less -S
+bin/ssh.sh "docker logs --tail 1000 reaction-memes 2>&1 | grep -i error" |
+  tail -n 100 | less -S

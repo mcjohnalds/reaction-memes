@@ -1,0 +1,55 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Resources:
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: reaction-memes-alarms
+
+  AlarmSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref AlarmTopic
+      Protocol: email
+      Endpoint: john@adowen.com
+
+  HealthCheck:
+    Type: AWS::Route53::HealthCheck
+    Properties:
+      HealthCheckConfig:
+        Type: HTTPS
+        FullyQualifiedDomainName: reactionmemes.app
+        Port: 443
+        ResourcePath: /
+        RequestInterval: 30
+        FailureThreshold: 3
+      HealthCheckTags:
+        - Key: Name
+          Value: reaction-memes
+
+  HealthCheckAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: reaction-memes-down
+      AlarmDescription: reactionmemes.app health check is failing.
+      Namespace: AWS/Route53
+      MetricName: HealthCheckStatus
+      Dimensions:
+        - Name: HealthCheckId
+          Value: !Ref HealthCheck
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 3
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      AlarmActions:
+        - !Ref AlarmTopic
+      OKActions:
+        - !Ref AlarmTopic
+
+Outputs:
+  AlarmTopicArn:
+    Value: !Ref AlarmTopic
+  HealthCheckId:
+    Value: !Ref HealthCheck

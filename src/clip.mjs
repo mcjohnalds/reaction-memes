@@ -6,22 +6,17 @@ import {
   RawImage,
 } from "@huggingface/transformers";
 
-const textModel = await CLIPTextModelWithProjection.from_pretrained(
-  "Xenova/clip-vit-base-patch32",
-  { dtype: "fp32" },
-);
-const visionModel = await CLIPVisionModelWithProjection.from_pretrained(
-  "Xenova/clip-vit-base-patch32",
-  { dtype: "fp32" },
-);
-const tokenizer = await AutoTokenizer.from_pretrained(
-  "Xenova/clip-vit-base-patch32",
-  { dtype: "fp32" },
-);
-const processor = await AutoProcessor.from_pretrained(
-  "Xenova/clip-vit-base-patch32",
-  { dtype: "fp32" },
-);
+const model = "Xenova/clip-vit-base-patch32";
+
+const textModel = await CLIPTextModelWithProjection.from_pretrained(model, {
+  dtype: "fp32",
+});
+const tokenizer = await AutoTokenizer.from_pretrained(model, { dtype: "fp32" });
+
+// Load the vision encoder lazily. Only the meme-generation script uses it, and
+// it costs ~1GB of memory we do not want resident in the web server.
+let visionModel;
+let processor;
 
 export async function encodeText(text) {
   const inputs = await tokenizer(text);
@@ -30,6 +25,10 @@ export async function encodeText(text) {
 }
 
 export async function encodeImage(imagePath) {
+  visionModel ??= await CLIPVisionModelWithProjection.from_pretrained(model, {
+    dtype: "fp32",
+  });
+  processor ??= await AutoProcessor.from_pretrained(model, { dtype: "fp32" });
   const image = await RawImage.read(imagePath);
   const inputs = await processor(image);
   const output = await visionModel(inputs);
