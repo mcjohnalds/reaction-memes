@@ -16,18 +16,18 @@ Run scripts in `./bin` to generate `./data` or find an existing copy.
 1. Create the ACM certificate (must be `us-east-1` for CloudFront):
 
    ```
-   arn=$(aws acm request-certificate --region us-east-1 \
+   arn=$(AWS_PROFILE=reaction-memes aws acm request-certificate --region us-east-1 \
      --domain-name reactionmemes.app --validation-method DNS \
      --query CertificateArn --output text)
-   aws acm describe-certificate --region us-east-1 --certificate-arn "$arn" \
+   AWS_PROFILE=reaction-memes aws acm describe-certificate --region us-east-1 --certificate-arn "$arn" \
      --query "Certificate.DomainValidationOptions[].ResourceRecord" \
      --output table
    ```
 
-2. Add the CNAME record to the Cloudflare DNS and wait for validation:
+2. Add the CNAME record to the Route 53 hosted zone and wait for validation:
 
    ```
-   aws acm wait certificate-validated --region us-east-1 \
+   AWS_PROFILE=reaction-memes aws acm wait certificate-validated --region us-east-1 \
      --certificate-arn "$arn"
    ```
 
@@ -38,7 +38,7 @@ Run scripts in `./bin` to generate `./data` or find an existing copy.
    ```
 
 4. Point `reactionmemes.app` at the stack's `DistributionDomainName` output with
-   a CNAME record in Cloudflare. The site is now live.
+   Route 53 A and AAAA alias records. The site is now live.
 
 - Confirm the SNS subscription from the email AWS sent to you.
 
@@ -48,5 +48,4 @@ Run `AWS_PROFILE=reaction-memes ./bin/deploy.sh`.
 
 ## Infra
 
-- Cloudflare DNS.
-- CloudFormation stacks in AWS account 220664822842.
+CloudFormation stacks in AWS account 220664822842.

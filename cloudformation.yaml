@@ -144,5 +144,4 @@ Outputs:
   EcrRepositoryUri:
     Value: !GetAtt EcrRepository.RepositoryUri
   DistributionDomainName:
-    Description: Point reactionmemes.app at this with a Cloudflare CNAME.
     Value: !GetAtt Distribution.DomainName
